@@ -4,7 +4,7 @@
 
 #include "utility.hpp"
 #include "components.hpp"
-#include "font.hpp"
+#include "text.hpp"
 
 #include <sushi/sushi.hpp>
 #include <glm/gtx/intersect.hpp>
@@ -51,47 +51,6 @@ const auto fragmentSource = R"(
     }
 )";
 
-const auto vertexSource_msdf = R"(
-    attribute vec3 position;
-    attribute vec2 texcoord;
-    attribute vec3 normal;
-    varying vec2 v_texcoord;
-    varying vec3 v_normal;
-    uniform mat4 MVP;
-    uniform mat4 normal_mat;
-    void main()
-    {
-        v_texcoord = texcoord;
-        v_normal = vec3(normal_mat * vec4(normal, 0.0));
-        gl_Position = MVP * vec4(position, 1.0);
-    }
-)";
-
-const auto fragmentSource_msdf = R"(
-    #extension GL_OES_standard_derivatives : enable
-
-    precision mediump float;
-    varying vec2 v_texcoord;
-    varying vec3 v_normal;
-    uniform sampler2D msdf;
-    uniform float pxRange;
-    uniform vec2 texSize;
-    uniform vec4 fgColor;
-
-    float median(float r, float g, float b) {
-        return max(min(r, g), min(max(r, g), b));
-    }
-
-    void main() {
-        vec2 msdfUnit = pxRange/texSize;
-        vec3 sample = texture2D(msdf, v_texcoord).rgb;
-        float sigDist = median(sample.r, sample.g, sample.b) - 0.5;
-        sigDist *= dot(msdfUnit, 0.5/fwidth(v_texcoord));
-        float opacity = clamp(sigDist + 0.5, 0.0, 1.0);
-        gl_FragColor = vec4(fgColor.rgb, fgColor.a*opacity);
-    }
-)";
-
 std::function<void()> loop;
 void main_loop() {
     loop();
@@ -133,57 +92,13 @@ int main() try {
         sushi::compile_shader(sushi::shader_type::FRAGMENT, {fragmentSource}),
     });
 
-    auto program_msdf = sushi::link_program({
-        sushi::compile_shader(sushi::shader_type::VERTEX, {vertexSource_msdf}),
-        sushi::compile_shader(sushi::shader_type::FRAGMENT, {fragmentSource_msdf}),
-    });
-
     sushi::set_program(program);
     sushi::set_uniform("s_texture", 0);
     glBindAttribLocation(program.get(), sushi::attrib_location::POSITION, "position");
     glBindAttribLocation(program.get(), sushi::attrib_location::TEXCOORD, "texcoord");
     glBindAttribLocation(program.get(), sushi::attrib_location::NORMAL, "normal");
 
-    sushi::set_program(program_msdf);
-    glBindAttribLocation(program_msdf.get(), sushi::attrib_location::POSITION, "position");
-    glBindAttribLocation(program_msdf.get(), sushi::attrib_location::TEXCOORD, "texcoord");
-    glBindAttribLocation(program_msdf.get(), sushi::attrib_location::NORMAL, "normal");
-
     auto font = msdf_font("LiberationSans-Regular");
-
-    auto draw_string = [&](const std::string& str, glm::mat4 viewproj, glm::vec2 pos, float scale) {
-        auto model = glm::scale(glm::translate(glm::mat4(1.f), glm::vec3(pos, 0.f)), glm::vec3{scale, scale, 1.f});
-        sushi::set_program(program_msdf);
-        sushi::set_uniform("msdf", 0);
-        sushi::set_uniform("pxRange", 4.f);
-        sushi::set_uniform("fgColor", glm::vec4{1,1,1,1});
-
-        for (auto c : str) {
-            auto& glyph = font.get_glyph(c);
-            sushi::set_uniform("MVP", (viewproj*model));
-            sushi::set_uniform("texSize", glm::vec2{glyph.texture.width,glyph.texture.height});
-            sushi::set_texture(0, glyph.texture);
-            sushi::draw_mesh(glyph.mesh);
-            model = glm::translate(model, glm::vec3{glyph.advance, 0.f, 0.f});
-        }
-    };
-
-    auto draw_string_right = [&](const std::string& str, glm::mat4 viewproj, glm::vec2 pos, float scale) {
-        auto model = glm::scale(glm::translate(glm::mat4(1.f), glm::vec3(pos, 0.f)), glm::vec3{scale, scale, 1.f});
-        sushi::set_program(program_msdf);
-        sushi::set_uniform("msdf", 0);
-        sushi::set_uniform("pxRange", 4.f);
-        sushi::set_uniform("fgColor", glm::vec4{1,1,1,1});
-
-        for (auto c : utility::reversed(str)) {
-            auto& glyph = font.get_glyph(c);
-            model = glm::translate(model, glm::vec3{-glyph.advance, 0.f, 0.f});
-            sushi::set_uniform("MVP", (viewproj*model));
-            sushi::set_uniform("texSize", glm::vec2{glyph.texture.width,glyph.texture.height});
-            sushi::set_texture(0, glyph.texture);
-            sushi::draw_mesh(glyph.mesh);
-        }
-    };
 
     database entities;
 
@@ -230,8 +145,8 @@ int main() try {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         auto proj = glm::ortho(0.f, float(display_width), 0.f, float(display_height), -1.f, 1.f);
-        draw_string("The quick brown fox jumped over the lazy dog. 1234567890", proj, {15, 15}, 50);
-        draw_string_right("Right aligned test.", proj, {display_width, display_height-50}, 50);
+        draw_string(font, "The quick brown fox jumped over the lazy dog. 1234567890", proj, {15, 15}, 50, text_align::LEFT);
+        draw_string(font, "Right aligned test.", proj, {display_width, display_height-50}, 50, text_align::RIGHT);
 
         SDL_GL_SwapWindow(g_window);
     };

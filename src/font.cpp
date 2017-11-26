@@ -15,6 +15,47 @@ msdfgen::FreetypeHandle* font_init() {
     return ft;
 }
 
+const auto vertexSource_msdf = R"(
+    attribute vec3 position;
+    attribute vec2 texcoord;
+    attribute vec3 normal;
+    varying vec2 v_texcoord;
+    varying vec3 v_normal;
+    uniform mat4 MVP;
+    uniform mat4 normal_mat;
+    void main()
+    {
+        v_texcoord = texcoord;
+        v_normal = vec3(normal_mat * vec4(normal, 0.0));
+        gl_Position = MVP * vec4(position, 1.0);
+    }
+)";
+
+const auto fragmentSource_msdf = R"(
+    #extension GL_OES_standard_derivatives : enable
+
+    precision mediump float;
+    varying vec2 v_texcoord;
+    varying vec3 v_normal;
+    uniform sampler2D msdf;
+    uniform float pxRange;
+    uniform vec2 texSize;
+    uniform vec4 fgColor;
+
+    float median(float r, float g, float b) {
+        return max(min(r, g), min(max(r, g), b));
+    }
+
+    void main() {
+        vec2 msdfUnit = pxRange/texSize;
+        vec3 sample = texture2D(msdf, v_texcoord).rgb;
+        float sigDist = median(sample.r, sample.g, sample.b) - 0.5;
+        sigDist *= dot(msdfUnit, 0.5/fwidth(v_texcoord));
+        float opacity = clamp(sigDist + 0.5, 0.0, 1.0);
+        gl_FragColor = vec4(fgColor.rgb, fgColor.a*opacity);
+    }
+)";
+
 } //static
 
 msdf_font::msdf_font(const std::string& fontname) {
@@ -29,6 +70,23 @@ msdf_font::msdf_font(const std::string& fontname) {
     if (!font) {
         throw std::runtime_error("Failed to load font "+fontname+".");
     }
+
+    program = sushi::link_program({
+        sushi::compile_shader(sushi::shader_type::VERTEX, {vertexSource_msdf}),
+        sushi::compile_shader(sushi::shader_type::FRAGMENT, {fragmentSource_msdf}),
+    });
+
+    sushi::set_program(program);
+    glBindAttribLocation(program.get(), sushi::attrib_location::POSITION, "position");
+    glBindAttribLocation(program.get(), sushi::attrib_location::TEXCOORD, "texcoord");
+    glBindAttribLocation(program.get(), sushi::attrib_location::NORMAL, "normal");
+}
+
+void msdf_font::bind_shader() const {
+    sushi::set_program(program);
+    sushi::set_uniform("msdf", 0);
+    sushi::set_uniform("pxRange", 4.f);
+    sushi::set_uniform("fgColor", glm::vec4{1,1,1,1});
 }
 
 const msdf_font::glyph& msdf_font::get_glyph(int unicode) {
@@ -106,60 +164,3 @@ const msdf_font::glyph& msdf_font::get_glyph(int unicode) {
     return iter->second;
 }
 
-//msdf_font::msdf_font(const std::string& fontname) {
-//    auto fontpath = "data/fonts/" + fontname;
-//    auto fontfilename = fontpath + "/" + fontname + ".json";
-
-//    std::ifstream fontfile (fontfilename);
-//    nlohmann::json json;
-//    fontfile >> json;
-
-//    auto max_top = float(json["max_top"]);
-
-//    std::cout << "max_top: " << max_top << std::endl;
-
-//    auto&& glyphs_json = json["glyphs"];
-
-//    for (auto iter = begin(glyphs_json); iter != end(glyphs_json); ++iter) {
-//        auto unicode = std::stoi(iter.key());
-//        auto details = iter.value();
-
-//        auto width = int(details["width"]);
-//        auto height = int(details["height"]);
-//        auto left = float(details["left"]);
-//        auto bottom = float(details["bottom"]);
-//        auto advance = float(details["advance"]);
-//        auto filename = fontpath + "/" + details["filename"].get<std::string>();
-
-//        auto right = left + width;
-//        auto top = bottom + height;
-
-//        auto& g = glyphs[unicode];
-
-//        left /= max_top;
-//        right /= max_top;
-//        bottom /= max_top;
-//        top /= max_top;
-//        advance /= max_top;
-
-//        g.mesh = sushi::load_static_mesh_data(
-//            {{left, bottom, 0.f},{left, top, 0.f},{right, top, 0.f},{right, bottom, 0.f}},
-//            {{0.f, 0.f, 1.f},{0.f, 0.f, 1.f},{0.f, 0.f, 1.f},{0.f, 0.f, 1.f}},
-//            {{0.f, 1.f},{0.f, 0.f},{1.f, 0.f},{1.f, 1.f}},
-//            {{{{0,0,0},{1,1,1},{2,2,2}}},{{{2,2,2},{3,3,3},{0,0,0}}}}
-//        );
-
-//        g.texture = sushi::load_texture_2d(filename, true, false, false, false);
-
-//        g.advance = advance;
-//    }
-//}
-
-//const msdf_font::glyph& msdf_font::get_glyph(int unicode) const {
-//    auto iter = glyphs.find(unicode);
-//    if (iter != end(glyphs)) {
-//        return iter->second;
-//    } else {
-//        return glyphs.at(0);
-//    }
-//}
