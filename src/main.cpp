@@ -5,6 +5,8 @@
 #include "utility.hpp"
 #include "components.hpp"
 #include "text.hpp"
+#include "resource_cache.hpp"
+#include "sprite.hpp"
 
 #include <sushi/sushi.hpp>
 #include <glm/gtx/intersect.hpp>
@@ -105,25 +107,15 @@ int main() try {
     std::unordered_map<std::string, std::shared_ptr<sushi::static_mesh>> meshes;
     std::unordered_map<std::string, std::shared_ptr<sushi::texture_2d>> textures;
 
-    auto get_mesh = [&](const std::string& name){
-        auto& meshptr = meshes[name];
-        if (!meshptr) {
-            std::clog << "Loading mesh " << name << "..." << std::endl;
-            meshptr = std::make_shared<sushi::static_mesh>(sushi::load_static_mesh_file("data/"+name+".obj"));
-            std::clog << "Mesh " << name << " loaded." << std::endl;
-        }
-        return meshptr;
-    };
+    resource_cache<sushi::texture_2d, std::string> texture_cache ([](const std::string& name) {
+        std::clog << "Loading texture: " << name << std::endl;
+        return sushi::load_texture_2d("data/textures/"+name+".png", true, true, true, true);
+    });
 
-    auto get_texture = [&](const std::string& name){
-        auto& texptr = textures[name];
-        if (!texptr) {
-            std::clog << "Loading texture " << name << "..." << std::endl;
-            texptr = std::make_shared<sushi::texture_2d>(sushi::load_texture_2d("data/"+name+".png", true, true, true, true));
-            std::clog << "Texture " << name << " loaded." << std::endl;
-        }
-        return texptr;
-    };
+    resource_cache<sushi::static_mesh, std::string> mesh_cache ([](const std::string& name) {
+        std::clog << "Loading static mesh: " << name << std::endl;
+        return sushi::load_static_mesh_file("data/models/"+name+".obj");
+    });
 
     loop = [&]{
         SDL_Event event;
@@ -145,6 +137,21 @@ int main() try {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         auto proj = glm::ortho(0.f, float(display_width), 0.f, float(display_height), -1.f, 1.f);
+
+        {
+            auto modelmat = glm::mat4(1.f);
+            modelmat = glm::translate(modelmat, glm::vec3{display_width/2, display_height/2, 0.f});
+            auto facetex = texture_cache.get("kawaii");
+            auto mesh = sprite_mesh(*facetex);
+            sushi::set_program(program);
+            sushi::set_uniform("MVP", proj*modelmat);
+            sushi::set_uniform("s_texture", 0);
+            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+            sushi::set_texture(0, *facetex);
+            sushi::draw_mesh(mesh);
+        }
+
         draw_string(font, "The quick brown fox jumped over the lazy dog. 1234567890", proj, {15, 15}, 50, text_align::LEFT);
         draw_string(font, "Right aligned test.", proj, {display_width, display_height-50}, 50, text_align::RIGHT);
 

@@ -1,6 +1,7 @@
-build
+build*/
 *.swp
 *.blend[0-9]
 *.kra[~]
+*.user
 emsdk_env.sh
 
