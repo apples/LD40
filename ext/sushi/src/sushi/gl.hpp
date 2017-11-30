@@ -5,8 +5,13 @@
 #ifndef SUSHI_GL_HPP
 #define SUSHI_GL_HPP
 
+#ifdef __EMSCRIPTEN__
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL_opengles2.h>
+#include "gles_shim.hpp"
+#else
+#include <glad/glad.h>
+#endif
 
 #include <glm/glm.hpp>
 

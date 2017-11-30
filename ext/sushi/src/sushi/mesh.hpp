@@ -33,7 +33,7 @@ struct vertex_array_deleter {
 
     void operator()(pointer p) const {
         auto buf = GLuint(p);
-        glDeleteVertexArraysOES(1, &buf);
+        glDeleteVertexArrays(1, &buf);
     }
 };
 
@@ -55,7 +55,7 @@ inline unique_buffer make_unique_buffer() {
 /// \return A unique vertex array object.
 inline unique_vertex_array make_unique_vertex_array() {
     GLuint buf;
-    glGenVertexArraysOES(1, &buf);
+    glGenVertexArrays(1, &buf);
     return unique_vertex_array(buf);
 }
 
@@ -163,8 +163,8 @@ struct animated_mesh_factory {
 /// Draws a mesh.
 /// \param mesh The mesh to draw.
 inline void draw_mesh(const static_mesh& mesh) {
-    glBindVertexArrayOES(mesh.vao.get());
-    SUSHI_DEFER { glBindVertexArrayOES(0); };
+    glBindVertexArray(mesh.vao.get());
+    SUSHI_DEFER { glBindVertexArray(0); };
     glDrawArrays(GL_TRIANGLES, 0, mesh.num_triangles * 3);
 }
 
@@ -174,8 +174,8 @@ inline void draw_mesh(const animated_mesh& mesh) {
     if (mesh.out_frames.size() > 32) throw;
     GLint program;
     glGetIntegerv(GL_CURRENT_PROGRAM, &program);
-    glBindVertexArrayOES(mesh.mesh->vao.get());
-    SUSHI_DEFER { glBindVertexArrayOES(0); };
+    glBindVertexArray(mesh.mesh->vao.get());
+    SUSHI_DEFER { glBindVertexArray(0); };
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.mesh->tris.get());
     SUSHI_DEFER { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); };
     glUniformMatrix4fv(glGetUniformLocation(program, "Bones"), mesh.out_frames.size(), GL_FALSE, (GLfloat*)&mesh.out_frames[0]);

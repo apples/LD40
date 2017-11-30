@@ -22,7 +22,7 @@ framebuffer_cubemap::framebuffer_cubemap(int width, TexType type) :
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, FACES[i], texture.handle.get(), 0);
         glFramebufferTextureEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_texture.handle.get(), 0);
         GLenum buffers[] = { GL_COLOR_ATTACHMENT0 };
-        glDrawBuffersEXT(1, &buffers[0]);
+        glDrawBuffers(1, &buffers[0]);
     }
 
     set_framebuffer(nullptr);

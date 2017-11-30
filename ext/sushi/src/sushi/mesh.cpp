@@ -30,8 +30,8 @@ static_mesh upload_static_mesh(const std::vector<GLfloat>& data, int num_tris) {
     glBindBuffer(GL_ARRAY_BUFFER, rv.vertex_buffer.get());
     glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(GLfloat), &data[0], GL_STATIC_DRAW);
 
-    glBindVertexArrayOES(rv.vao.get());
-    SUSHI_DEFER { glBindVertexArrayOES(0); };
+    glBindVertexArray(rv.vao.get());
+    SUSHI_DEFER { glBindVertexArray(0); };
 
     auto stride = sizeof(GLfloat) * (3 + 2 + 3);
     glEnableVertexAttribArray(attrib_location::POSITION);
@@ -261,8 +261,8 @@ animated_mesh_factory::animated_mesh_factory(const iqm::iqm_data& data) {
 
         mesh.num_tris = m.num_triangles;
 
-        glBindVertexArrayOES(mesh.vao.get());
-        SUSHI_DEFER { glBindVertexArrayOES(0); };
+        glBindVertexArray(mesh.vao.get());
+        SUSHI_DEFER { glBindVertexArray(0); };
         SUSHI_DEFER { glBindBuffer(GL_ARRAY_BUFFER, 0); };
 
         glEnableVertexAttribArray(sushi::attrib_location::POSITION);

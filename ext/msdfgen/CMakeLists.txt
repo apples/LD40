@@ -17,6 +17,16 @@ file(GLOB_RECURSE msdfgen_SOURCES
 add_library(msdfgen ${msdfgen_SOURCES} ${msdfgen_HEADERS})
 target_include_directories(msdfgen PUBLIC "include")
 target_include_directories(msdfgen INTERFACE ".")
-target_compile_options(msdfgen PUBLIC "-s" "USE_FREETYPE=1")
-set_target_properties(msdfgen PROPERTIES
-    LINK_FLAGS "-s USE_FREETYPE=1")
+
+# Freetype
+if (EMSCRIPTEN)
+    target_compile_options(msdfgen PUBLIC "-s" "USE_FREETYPE=1")
+    set_target_properties(msdfgen PROPERTIES
+        LINK_FLAGS "-s USE_FREETYPE=1")
+else()
+    find_package(PkgConfig)
+    pkg_search_module(FREETYPE REQUIRED freetype2)
+    target_link_libraries(msdfgen ${FREETYPE_LIBRARIES})
+    target_include_directories(msdfgen PUBLIC ${FREETYPE_INCLUDE_DIRS})
+    target_compile_options(msdfgen PUBLIC ${FREETYPE_CFLAGS_OTHER})
+endif()

@@ -15,14 +15,14 @@ void attach_colors(const std::vector<sushi::texture_2d>& texs) {
 
     std::vector<GLenum> buffers(texs.size());
     std::iota(begin(buffers), end(buffers), GL_COLOR_ATTACHMENT0);
-    glDrawBuffersEXT(buffers.size(), &buffers[0]);
+    glDrawBuffers(buffers.size(), &buffers[0]);
 }
 
 void check_framebuffer_errors() {
     switch (glCheckFramebufferStatus(GL_FRAMEBUFFER)) {
         case GL_FRAMEBUFFER_COMPLETE:
             break;
-        case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+        case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
             throw std::runtime_error("Failed to create framebuffer: Texture size mismatch!");
         case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
             throw std::runtime_error("Failed to create framebuffer: Incomplete attachments!");

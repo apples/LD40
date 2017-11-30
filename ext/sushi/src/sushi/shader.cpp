@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
@@ -25,22 +26,22 @@ unique_shader compile_shader(shader_type type, std::vector<const GLchar*> code) 
 
     glCompileShader(rv.get());
 
+    GLint log_length;
+    glGetShaderiv(rv.get(), GL_INFO_LOG_LENGTH, &log_length);
+
+    if (log_length > 0) {
+        auto log = std::make_unique<GLchar[]>(log_length);
+        glGetShaderInfoLog(rv.get(), log_length, nullptr, log.get());
+
+        std::clog << "Shader compilation log:\n" << log.get() << std::endl;
+    }
+
     GLint result;
     glGetShaderiv(rv.get(), GL_COMPILE_STATUS, &result);
     if (result == GL_FALSE) {
         std::ostringstream oss;
 
         oss << "Shader compilation failed!" << std::endl;
-
-        GLint log_length;
-        glGetShaderiv(rv.get(), GL_INFO_LOG_LENGTH, &log_length);
-
-        if (log_length > 0) {
-            auto log = std::make_unique<GLchar[]>(log_length);
-            glGetShaderInfoLog(rv.get(), log_length, nullptr, log.get());
-
-            oss << "Shader compilation log:\n" << log.get() << std::endl;
-        }
 
         throw shader_error(oss.str());
     }
@@ -71,22 +72,22 @@ unique_program link_program(const std::vector<const_reference_wrapper<unique_sha
 
     glLinkProgram(rv.get());
 
+    GLint log_length;
+    glGetProgramiv(rv.get(), GL_INFO_LOG_LENGTH, &log_length);
+
+    if (log_length > 0) {
+        auto log = std::make_unique<GLchar[]>(log_length);
+        glGetProgramInfoLog(rv.get(), log_length, nullptr, log.get());
+
+        std::clog << "Program compilation log:\n" << log.get() << std::endl;
+    }
+
     GLint result;
     glGetProgramiv(rv.get(), GL_LINK_STATUS, &result);
     if (result == GL_FALSE) {
         std::ostringstream oss;
 
         oss << "Program compilation failed!" << std::endl;
-
-        GLint log_length;
-        glGetProgramiv(rv.get(), GL_INFO_LOG_LENGTH, &log_length);
-
-        if (log_length > 0) {
-            auto log = std::make_unique<GLchar[]>(log_length);
-            glGetProgramInfoLog(rv.get(), log_length, nullptr, log.get());
-
-            oss << "Program compilation log:\n" << log.get() << std::endl;
-        }
 
         throw std::runtime_error(oss.str());
     }
