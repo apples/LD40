@@ -15,6 +15,9 @@
 
 #include <sol.hpp>
 
+#include <soloud.h>
+#include <soloud_wav.h>
+
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -96,9 +99,13 @@ int main(int argc, char* argv[]) try {
     lua.script("test()");
 
     std::clog << "Initializing SDL..." << std::endl;
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         throw std::runtime_error(SDL_GetError());
     }
+
+    std::clog << "Initializing SoLoud..." << std::endl;
+    SoLoud::Soloud soloud;
+    soloud.init();
 
     std::clog << "Loading config..." << std::endl;
     auto config = emberjs::get_config();
@@ -170,8 +177,16 @@ int main(int argc, char* argv[]) try {
         return sushi::load_static_mesh_file("data/models/"+name+".obj");
     });
 
+    resource_cache<SoLoud::Wav, std::string> wav_cache ([](const std::string& name) {
+        std::clog << "Loading WAV: " << name << std::endl;
+        auto wav = std::make_shared<SoLoud::Wav>();
+        wav->load(("data/sfx/"+name+".wav").c_str());
+        return wav;
+    });
+
     auto facetex = texture_cache.get("kawaii");
     auto facemesh = sprite_mesh(*facetex);
+    auto wavtest = wav_cache.get("test");
 
     loop = [&]{
         SDL_Event event;
@@ -182,6 +197,16 @@ int main(int argc, char* argv[]) try {
                     std::clog << "Goodbye!" << std::endl;
                     platform::cancel_main_loop();
                     return;
+                case SDL_KEYDOWN:
+                    if (event.key.repeat == 0) {
+                        switch (event.key.keysym.scancode) {
+                            case SDL_SCANCODE_SPACE:
+                                std::clog << "test" << std::endl;
+                                soloud.play(*wavtest);
+                                break;
+                        }
+                    }
+                    break;
             }
         }
 
@@ -198,6 +223,12 @@ int main(int argc, char* argv[]) try {
         {
             auto modelmat = glm::mat4(1.f);
             modelmat = glm::translate(modelmat, glm::vec3{display_width/2, display_height/2, 0.f});
+
+            if (keys[SDL_SCANCODE_A]) modelmat = glm::translate(modelmat, glm::vec3{-10,0,0});
+            if (keys[SDL_SCANCODE_D]) modelmat = glm::translate(modelmat, glm::vec3{10,0,0});
+            if (keys[SDL_SCANCODE_S]) modelmat = glm::translate(modelmat, glm::vec3{0,-10,0});
+            if (keys[SDL_SCANCODE_W]) modelmat = glm::translate(modelmat, glm::vec3{0,10,0});
+
             sushi::set_program(program);
             sushi::set_uniform("MVP", proj*modelmat);
             sushi::set_uniform("s_texture", 0);
@@ -219,6 +250,7 @@ int main(int argc, char* argv[]) try {
     platform::do_main_loop(main_loop, 0, 1);
 
     std::clog << "Cleaning up..." << std::endl;
+    soloud.deinit();
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(g_window);
     SDL_Quit();

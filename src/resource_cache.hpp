@@ -5,16 +5,25 @@
 #include <memory>
 #include <unordered_map>
 #include <utility>
+#include <type_traits>
 
 template <typename T, typename S>
 class resource_cache {
 public:
-    resource_cache(std::function<T(const S&)> f) : factory(std::move(f)) {}
+    using factory_function = std::function<std::shared_ptr<T>(const S&)>;
+
+    template <typename F>
+    using require_is_not_factory = std::enable_if_t<!std::is_convertible<std::decay_t<F>, factory_function>::value>*;
+
+    resource_cache(factory_function f) : factory(std::move(f)) {}
+
+    template <typename F>
+    resource_cache(F&& f, require_is_not_factory<F> = {}) : factory(make_factory(std::forward<F>(f))) {}
 
     std::shared_ptr<T> get(const S& s) {
         auto& ptr = cache[s];
         if (!ptr) {
-            ptr = std::make_shared<T>(factory(s));
+            ptr = factory(s);
         }
         return ptr;
     }
@@ -24,7 +33,14 @@ public:
     }
 
 private:
-    std::function<T(const S&)> factory;
+    template <typename F>
+    static factory_function make_factory(F&& f) {
+        return [f=std::forward<F>(f)](const S& s) {
+            return std::make_shared<T>(f(s));
+        };
+    }
+
+    factory_function factory;
     std::map<S, std::shared_ptr<T>> cache;
 };
 

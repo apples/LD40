@@ -20,8 +20,8 @@ target_include_directories(msdfgen INTERFACE ".")
 
 # Freetype
 if (EMSCRIPTEN)
-    target_compile_options(msdfgen PUBLIC "-s" "USE_FREETYPE=1")
     set_target_properties(msdfgen PROPERTIES
+        COMPILE_FLAGS "-s USE_FREETYPE=1"
         LINK_FLAGS "-s USE_FREETYPE=1")
 else()
     find_package(PkgConfig)

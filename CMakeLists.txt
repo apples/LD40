@@ -7,6 +7,7 @@ add_subdirectory(ext/sol2)
 add_subdirectory(ext/glm)
 add_subdirectory(ext/lodepng)
 add_subdirectory(ext/msdfgen)
+add_subdirectory(ext/soloud)
 
 if (EMSCRIPTEN)
     set(LD40_WWW_DIR "${CMAKE_BINARY_DIR}/www" CACHE PATH "Client Output Directory")
@@ -30,16 +31,20 @@ if (EMSCRIPTEN)
     set(LD40_DATA_DIR "${CMAKE_SOURCE_DIR}/data" CACHE PATH "Client Data Directory")
     file(GLOB_RECURSE LD40_DATA_FILES "${LD40_DATA_DIR}/*")
 
+    string(CONCAT LD40_EMSCRIPTEN_PORTS
+        " -s USE_SDL=2"
+        " -s USE_SDL_IMAGE=2"
+        " -s USE_SDL_NET=2"
+        " -s USE_FREETYPE=1")
+
     # Game Executable
     file(GLOB_RECURSE LD40_SRCS src/*.cpp src/*.hpp)
     add_executable(LD40 ${LD40_SRCS} ${LD40_JS} ${LD40_SHELL})
     target_include_directories(LD40 PRIVATE src/)
     string(CONCAT LD40_LINK_FLAGS
+        "${LD40_EMSCRIPTEN_PORTS}"
         " -s DISABLE_EXCEPTION_CATCHING=0"
-        " -s USE_SDL=2"
-        " -s USE_SDL_IMAGE=2"
-        " -s USE_SDL_NET=2"
-        " -s USE_FREETYPE=1"
+        " -lopenal"
         " --preload-file ${LD40_DATA_DIR}@data"
         " --shell-file ${LD40_SHELL}")
     string(CONCAT LD40_LINK_FLAGS_DEBUG
@@ -49,6 +54,7 @@ if (EMSCRIPTEN)
     set_target_properties(LD40 PROPERTIES
         CXX_STANDARD 14
         SUFFIX .html
+        COMPILE_FLAGS "${LD40_EMSCRIPTEN_PORTS}"
         LINK_FLAGS "${LD40_LINK_FLAGS}"
         LINK_FLAGS_DEBUG "${LD40_LINK_FLAGS_DEBUG}"
         LINK_DEPENDS "${LD40_SHELL};${LD40_DATA_FILES}"
@@ -58,7 +64,8 @@ if (EMSCRIPTEN)
         ginseng
         sol2
         sushi
-        msdfgen)
+        msdfgen
+        soloud)
     add_dependencies(LD40 LD40_static)
 else()
     find_package(sdl2 REQUIRED)
@@ -103,6 +110,7 @@ else()
         sol2
         sushi
         msdfgen
+        soloud
         ${SDL2_LIBRARIES}
         glad)
     add_dependencies(LD40 LD40_data)
