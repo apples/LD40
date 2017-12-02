@@ -10,6 +10,7 @@
 #include "resources.hpp"
 #include "spritesheet.hpp"
 #include "tilemap.hpp"
+#include "animated_sprite.hpp"
 
 #include <sushi/sushi.hpp>
 #include <glm/gtx/intersect.hpp>
@@ -26,6 +27,8 @@
 #include <cstddef>
 #include <cmath>
 #include <functional>
+#include <thread>
+#include <chrono>
 
 #ifdef __EMSCRIPTEN__
 const auto vertexSource = R"(
@@ -169,10 +172,14 @@ int main(int argc, char* argv[]) try {
 
     database entities;
 
+    auto player = entities.create_entity();
+    entities.create_component(player, component::position{20,20});
+    entities.create_component(player, component::animated_sprite{"knight", "idle", 0, 0});
+
     auto framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     auto framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
-    auto tiles_texture = resources::texture.get("tiles");
+    auto tiles_texture = resources::textures.get("tiles");
     auto tilesheet = spritesheet(tiles_texture, 16, 16);
 
     std::ifstream test_stage_file ("data/stages/test.json");
@@ -180,6 +187,9 @@ int main(int argc, char* argv[]) try {
     test_stage_file >> test_stage_json;
     test_stage_file.close();
     auto test_stage = tilemap::tilemap(test_stage_json);
+
+    auto last_update = std::chrono::steady_clock::now();
+    auto frame_delay = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(1)) / 60;
 
     auto game_loop = [&]{
         SDL_Event event;
@@ -194,6 +204,24 @@ int main(int argc, char* argv[]) try {
         }
 
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
+
+        auto& player_pos = entities.get_component<component::position>(player);
+
+        if (keys[SDL_SCANCODE_LEFT]) {
+            player_pos.x -= 1;
+        }
+
+        if (keys[SDL_SCANCODE_RIGHT]) {
+            player_pos.x += 1;
+        }
+
+        if (keys[SDL_SCANCODE_DOWN]) {
+            player_pos.y -= 1;
+        }
+
+        if (keys[SDL_SCANCODE_UP]) {
+            player_pos.y += 1;
+        }
 
         sushi::set_framebuffer(framebuffer);
         {
@@ -230,6 +258,42 @@ int main(int argc, char* argv[]) try {
                     }
                 }
             }
+
+            entities.visit([&](const component::position& pos, component::animated_sprite& sprite) {
+                auto animation = resources::animated_sprites.get(sprite.name);
+                auto& sheet = animation->get_spritesheet();
+                auto& anim = animation->get_anim(sprite.anim);
+
+                --sprite.frame_time;
+
+                if (sprite.frame_time < 0) {
+                    if (sprite.cur_frame == anim.frames.size()-1) {
+                        if (anim.loops) {
+                            sprite.cur_frame = 0;
+                            sprite.frame_time = anim.frames[0].duration;
+                        } else {
+                            sprite.frame_time = 0;
+                        }
+                    } else {
+                        ++sprite.cur_frame;
+                        sprite.frame_time = anim.frames[sprite.cur_frame].duration;
+                    }
+                }
+
+                auto& texture = sheet.get_texture();
+                auto cell = anim.frames[sprite.cur_frame].cell;
+                auto& mesh = sheet.get_mesh(cell/16, cell%16);
+
+                auto modelmat = glm::mat4(1.f);
+                modelmat = glm::translate(modelmat, glm::vec3{pos.x, pos.y, 0});
+                sushi::set_program(program);
+                sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+                sushi::set_uniform("s_texture", 0);
+                sushi::set_uniform("MVP", projmat * modelmat);
+                sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                sushi::set_texture(0, texture);
+                sushi::draw_mesh(mesh);
+            });
         }
 
         sushi::set_framebuffer(nullptr);
@@ -252,6 +316,12 @@ int main(int argc, char* argv[]) try {
         }
 
         SDL_GL_SwapWindow(g_window);
+
+#ifdef __EMSCRIPTEN__
+#else
+        std::this_thread::sleep_until(last_update + frame_delay);
+        last_update = std::chrono::steady_clock::now();
+#endif
     };
 
     std::clog << "Init Success." << std::endl;

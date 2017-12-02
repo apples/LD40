@@ -16,6 +16,13 @@ struct position {
     float y;
 };
 
+struct animated_sprite {
+    std::string name;
+    std::string anim;
+    int cur_frame = 0;
+    int frame_time = 0;
+};
+
 } //namespace component
 
 namespace scripting {
@@ -63,6 +70,9 @@ void new_component_usertype(sol::state& lua, const std::string& name, Args&&... 
 
 template <>
 void register_type<component::position>(sol::state& lua);
+
+template <>
+void register_type<component::animated_sprite>(sol::state& lua);
 
 } //namespace scripting
 

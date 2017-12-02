@@ -897,6 +897,9 @@ private:
     template <typename Com>
     component_set_impl<Com>* get_com_set() {
         auto guid = get_type_guid<Com>();
+        if (guid >= component_sets.size()) {
+            return nullptr;
+        }
         auto& com_set = component_sets[guid];
         auto com_set_impl = static_cast<component_set_impl<Com>*>(com_set.get());
         return com_set_impl;
