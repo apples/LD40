@@ -233,6 +233,12 @@ int main(int argc, char* argv[]) try {
 
             auto projmat = glm::ortho(0.f, float(320), 0.f, float(240), -10.f, 10.f);
 
+            // View matrix for camera
+            // Camera should invert the player matrix to follow the player around
+            // x+80 y+60 centers the camera
+            auto cammat = glm::mat4(1.f);
+            cammat = glm::translate(cammat, glm::vec3{-player_pos.x + 80, -player_pos.y + 60, 0});
+
             for (auto r = 0; r < test_stage.get_num_rows(); ++r) {
                 for (auto c = 0; c < test_stage.get_num_cols(); ++c) {
                     auto& tile = test_stage.get(r, c);
@@ -245,13 +251,13 @@ int main(int argc, char* argv[]) try {
                         sushi::set_uniform("s_texture", 0);
                         sushi::set_texture(0, tilesheet.get_texture());
                         if (tile.flags & tilemap::BACKGROUND) {
-                            sushi::set_uniform("MVP", projmat * modelmat);
+                            sushi::set_uniform("MVP", projmat * cammat * modelmat);
                             sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
                             sushi::draw_mesh(tilesheet.get_mesh(tile.background/16, tile.background%16));
                         }
                         if (tile.flags & tilemap::FOREGROUND) {
                             auto raised_modelmat = glm::translate(modelmat, glm::vec3{0, 0, 1});
-                            sushi::set_uniform("MVP", projmat * modelmat);
+                            sushi::set_uniform("MVP", projmat * cammat * modelmat);
                             sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
                             sushi::draw_mesh(tilesheet.get_mesh(tile.foreground/16, tile.foreground%16));
                         }
@@ -289,7 +295,7 @@ int main(int argc, char* argv[]) try {
                 sushi::set_program(program);
                 sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
                 sushi::set_uniform("s_texture", 0);
-                sushi::set_uniform("MVP", projmat * modelmat);
+                sushi::set_uniform("MVP", projmat * cammat * modelmat);
                 sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
                 sushi::set_texture(0, texture);
                 sushi::draw_mesh(mesh);
