@@ -23,6 +23,10 @@ struct animated_sprite {
     int frame_time = 0;
 };
 
+struct brain{
+    std::function <void(database::ent_id)> think;
+};
+
 } //namespace component
 
 namespace scripting {

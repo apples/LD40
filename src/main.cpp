@@ -176,6 +176,26 @@ int main(int argc, char* argv[]) try {
     entities.create_component(player, component::position{20,20});
     entities.create_component(player, component::animated_sprite{"knight", "idle", 0, 0});
 
+    auto enemythink = [&](database::ent_id self){
+        auto& self_pos = entities.get_component<component::position>(self);
+        auto& player_pos = entities.get_component<component::position>(player);
+        // Vectors that point enemy towards player
+        float dirx = player_pos.x - self_pos.x;
+        float diry = player_pos.y - self_pos.y;
+        // Normalize the vectors
+        float hyp = sqrt((dirx * dirx) +(diry * diry));
+        dirx /= hyp;
+        diry /= hyp;
+        // translate enemy to player position via the vectors.
+        self_pos.x += dirx;
+        self_pos.y += diry;
+    };
+
+    auto enemy = entities.create_entity();
+    entities.create_component(enemy, component::position{100,100});
+    entities.create_component(enemy, component::animated_sprite{"knight", "idle", 0, 0});
+    entities.create_component(enemy, component::brain{enemythink});
+
     auto framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     auto framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
@@ -264,6 +284,10 @@ int main(int argc, char* argv[]) try {
                     }
                 }
             }
+
+             entities.visit([&](component::brain& brain, database::ent_id self) {
+                brain.think(self);
+             });
 
             entities.visit([&](const component::position& pos, component::animated_sprite& sprite) {
                 auto animation = resources::animated_sprites.get(sprite.name);
