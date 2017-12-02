@@ -80,6 +80,15 @@ auto reversed(T&& t) {
     return reversed_impl<T>(std::forward<T>(t));
 }
 
+template <typename... Ts>
+auto vectorify(Ts&&... ts) {
+    using discard = int[];
+    std::vector<std::common_type_t<Ts...>> rv;
+    rv.reserve(sizeof...(ts));
+    discard{(rv.push_back(std::forward<Ts>(ts)),0)...};
+    return rv;
+}
+
 } //namespace utility
 
 #endif //LD40_UTILITY_HPP

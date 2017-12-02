@@ -5,9 +5,10 @@
 #include "utility.hpp"
 #include "components.hpp"
 #include "text.hpp"
-#include "resource_cache.hpp"
 #include "sprite.hpp"
 #include "platform.hpp"
+#include "resources.hpp"
+#include "spritesheet.hpp"
 
 #include <sushi/sushi.hpp>
 #include <glm/gtx/intersect.hpp>
@@ -80,7 +81,7 @@ const auto fragmentSource = R"(#version 400
     void main()
     {
         //if (dot(v_normal, cam_forward) > 0.0) discard;
-        color = vec4(texture(s_texture, v_texcoord).rgb, 1);
+        color = texture(s_texture, v_texcoord);
     }
 )";
 #endif
@@ -167,28 +168,10 @@ int main(int argc, char* argv[]) try {
 
     database entities;
 
-    resource_cache<sushi::texture_2d, std::string> texture_cache ([](const std::string& name) {
-        std::clog << "Loading texture: " << name << std::endl;
-        return sushi::load_texture_2d("data/textures/"+name+".png", true, true, true, true);
-    });
+    auto framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
+    auto framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
-    resource_cache<sushi::static_mesh, std::string> mesh_cache ([](const std::string& name) {
-        std::clog << "Loading static mesh: " << name << std::endl;
-        return sushi::load_static_mesh_file("data/models/"+name+".obj");
-    });
-
-    resource_cache<SoLoud::Wav, std::string> wav_cache ([](const std::string& name) {
-        std::clog << "Loading WAV: " << name << std::endl;
-        auto wav = std::make_shared<SoLoud::Wav>();
-        wav->load(("data/sfx/"+name+".wav").c_str());
-        return wav;
-    });
-
-    auto facetex = texture_cache.get("kawaii");
-    auto facemesh = sprite_mesh(*facetex);
-    auto wavtest = wav_cache.get("test");
-
-    loop = [&]{
+    auto game_loop = [&]{
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -197,16 +180,6 @@ int main(int argc, char* argv[]) try {
                     std::clog << "Goodbye!" << std::endl;
                     platform::cancel_main_loop();
                     return;
-                case SDL_KEYDOWN:
-                    if (event.key.repeat == 0) {
-                        switch (event.key.keysym.scancode) {
-                            case SDL_SCANCODE_SPACE:
-                                std::clog << "test" << std::endl;
-                                soloud.play(*wavtest);
-                                break;
-                        }
-                    }
-                    break;
             }
         }
 
@@ -220,26 +193,70 @@ int main(int argc, char* argv[]) try {
 
         auto proj = glm::ortho(0.f, float(display_width), 0.f, float(display_height), -1.f, 1.f);
 
+        SDL_GL_SwapWindow(g_window);
+    };
+
+    auto tiles_texture = resources::texture.get("tiles");
+    auto tilesheet = spritesheet(tiles_texture, 16, 16);
+
+    auto editor_loop = [&]{
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
         {
-            auto modelmat = glm::mat4(1.f);
-            modelmat = glm::translate(modelmat, glm::vec3{display_width/2, display_height/2, 0.f});
-
-            if (keys[SDL_SCANCODE_A]) modelmat = glm::translate(modelmat, glm::vec3{-10,0,0});
-            if (keys[SDL_SCANCODE_D]) modelmat = glm::translate(modelmat, glm::vec3{10,0,0});
-            if (keys[SDL_SCANCODE_S]) modelmat = glm::translate(modelmat, glm::vec3{0,-10,0});
-            if (keys[SDL_SCANCODE_W]) modelmat = glm::translate(modelmat, glm::vec3{0,10,0});
-
-            sushi::set_program(program);
-            sushi::set_uniform("MVP", proj*modelmat);
-            sushi::set_uniform("s_texture", 0);
-            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
-            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
-            sushi::set_texture(0, *facetex);
-            sushi::draw_mesh(facemesh);
+            switch (event.type) {
+                case SDL_QUIT:
+                    std::clog << "Goodbye!" << std::endl;
+                    platform::cancel_main_loop();
+                    return;
+            }
         }
 
-        draw_string(font, "The quick brown fox jumped over the lazy dog. 1234567890", proj, {15, 15}, 50, text_align::LEFT);
-        draw_string(font, "Right aligned test.", proj, {display_width, display_height-50}, 50, text_align::RIGHT);
+        const Uint8 *keys = SDL_GetKeyboardState(NULL);
+
+        sushi::set_framebuffer(framebuffer);
+        {
+            glClearColor(0,0,0,1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            auto projmat = glm::ortho(0.f, float(320), 0.f, float(240), -1.f, 1.f);
+
+            for (auto r = 0; r < 16; ++r) {
+                for (auto c = 0; c < 16; ++c) {
+                    auto modelmat = glm::mat4(1.f);
+                    modelmat = glm::translate(modelmat, glm::vec3{8, 8, 0});
+                    modelmat = glm::translate(modelmat, glm::vec3{c*16, r*16, 0});
+                    sushi::set_program(program);
+                    sushi::set_uniform("MVP", projmat * modelmat);
+                    sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                    sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+                    sushi::set_uniform("s_texture", 0);
+                    sushi::set_texture(0, tilesheet.get_texture());
+                    sushi::draw_mesh(tilesheet.get_mesh(r,c));
+                }
+            }
+        }
+
+        sushi::set_framebuffer(nullptr);
+        {
+            glClearColor(0,0,0,1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_BLEND);
+
+            auto projmat = glm::ortho(0.f, float(320), 0.f, float(240), -1.f, 1.f);
+            auto modelmat = glm::mat4(1.f);
+            modelmat = glm::translate(modelmat, glm::vec3{160, 120, 0});
+            sushi::set_program(program);
+            sushi::set_uniform("MVP", projmat * modelmat);
+            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+            sushi::set_uniform("s_texture", 0);
+            sushi::set_texture(0, framebuffer.color_texs[0]);
+            sushi::draw_mesh(framebuffer_mesh);
+        }
 
         SDL_GL_SwapWindow(g_window);
     };
@@ -247,6 +264,7 @@ int main(int argc, char* argv[]) try {
     std::clog << "Init Success." << std::endl;
 
     std::clog << "Starting main loop..." << std::endl;
+    loop = editor_loop;
     platform::do_main_loop(main_loop, 0, 1);
 
     std::clog << "Cleaning up..." << std::endl;

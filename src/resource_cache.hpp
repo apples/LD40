@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <utility>
 #include <type_traits>
+#include <map>
 
 template <typename T, typename S>
 class resource_cache {
@@ -30,6 +31,12 @@ public:
 
     void clear() {
         cache.clear();
+    }
+
+    std::shared_ptr<T> reload(const S& s) {
+        auto& ptr = cache[s];
+        ptr = factory(s);
+        return ptr;
     }
 
 private:

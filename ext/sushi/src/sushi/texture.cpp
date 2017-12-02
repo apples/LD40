@@ -64,7 +64,9 @@ texture_2d create_uninitialized_texture_2d(int width, int height, TexType type) 
     texture_2d rv = {make_unique_texture(), width, height};
     sushi::set_texture(0, rv);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GLint(type), width, height, 0, get_source_type(type), GL_UNSIGNED_BYTE, nullptr);
     return rv;
 }
