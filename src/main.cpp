@@ -9,6 +9,7 @@
 #include "platform.hpp"
 #include "resources.hpp"
 #include "spritesheet.hpp"
+#include "tilemap.hpp"
 
 #include <sushi/sushi.hpp>
 #include <glm/gtx/intersect.hpp>
@@ -80,7 +81,7 @@ const auto fragmentSource = R"(#version 400
     layout(location = 0) out vec4 color;
     void main()
     {
-        //if (dot(v_normal, cam_forward) > 0.0) discard;
+        if (dot(v_normal, cam_forward) > 0.0) discard;
         color = texture(s_texture, v_texcoord);
     }
 )";
@@ -171,35 +172,16 @@ int main(int argc, char* argv[]) try {
     auto framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     auto framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
-    auto game_loop = [&]{
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type) {
-                case SDL_QUIT:
-                    std::clog << "Goodbye!" << std::endl;
-                    platform::cancel_main_loop();
-                    return;
-            }
-        }
-
-        const Uint8 *keys = SDL_GetKeyboardState(NULL);
-
-        glClearColor(0,0,0,1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        auto proj = glm::ortho(0.f, float(display_width), 0.f, float(display_height), -1.f, 1.f);
-
-        SDL_GL_SwapWindow(g_window);
-    };
-
     auto tiles_texture = resources::texture.get("tiles");
     auto tilesheet = spritesheet(tiles_texture, 16, 16);
 
-    auto editor_loop = [&]{
+    std::ifstream test_stage_file ("data/stages/test.json");
+    nlohmann::json test_stage_json;
+    test_stage_file >> test_stage_json;
+    test_stage_file.close();
+    auto test_stage = tilemap::tilemap(test_stage_json);
+
+    auto game_loop = [&]{
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -221,20 +203,31 @@ int main(int argc, char* argv[]) try {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            auto projmat = glm::ortho(0.f, float(320), 0.f, float(240), -1.f, 1.f);
+            auto projmat = glm::ortho(0.f, float(320), 0.f, float(240), -10.f, 10.f);
 
-            for (auto r = 0; r < 16; ++r) {
-                for (auto c = 0; c < 16; ++c) {
-                    auto modelmat = glm::mat4(1.f);
-                    modelmat = glm::translate(modelmat, glm::vec3{8, 8, 0});
-                    modelmat = glm::translate(modelmat, glm::vec3{c*16, r*16, 0});
-                    sushi::set_program(program);
-                    sushi::set_uniform("MVP", projmat * modelmat);
-                    sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
-                    sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
-                    sushi::set_uniform("s_texture", 0);
-                    sushi::set_texture(0, tilesheet.get_texture());
-                    sushi::draw_mesh(tilesheet.get_mesh(r,c));
+            for (auto r = 0; r < test_stage.get_num_rows(); ++r) {
+                for (auto c = 0; c < test_stage.get_num_cols(); ++c) {
+                    auto& tile = test_stage.get(r, c);
+                    if (tile.flags & tilemap::BACKGROUND || tile.flags & tilemap::FOREGROUND) {
+                        auto modelmat = glm::mat4(1.f);
+                        modelmat = glm::translate(modelmat, glm::vec3{8, 8, 0});
+                        modelmat = glm::translate(modelmat, glm::vec3{c*16, r*16, 0});
+                        sushi::set_program(program);
+                        sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+                        sushi::set_uniform("s_texture", 0);
+                        sushi::set_texture(0, tilesheet.get_texture());
+                        if (tile.flags & tilemap::BACKGROUND) {
+                            sushi::set_uniform("MVP", projmat * modelmat);
+                            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                            sushi::draw_mesh(tilesheet.get_mesh(tile.background/16, tile.background%16));
+                        }
+                        if (tile.flags & tilemap::FOREGROUND) {
+                            auto raised_modelmat = glm::translate(modelmat, glm::vec3{0, 0, 1});
+                            sushi::set_uniform("MVP", projmat * modelmat);
+                            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                            sushi::draw_mesh(tilesheet.get_mesh(tile.foreground/16, tile.foreground%16));
+                        }
+                    }
                 }
             }
         }
@@ -264,7 +257,7 @@ int main(int argc, char* argv[]) try {
     std::clog << "Init Success." << std::endl;
 
     std::clog << "Starting main loop..." << std::endl;
-    loop = editor_loop;
+    loop = game_loop;
     platform::do_main_loop(main_loop, 0, 1);
 
     std::clog << "Cleaning up..." << std::endl;
