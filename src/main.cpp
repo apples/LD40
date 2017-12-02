@@ -174,6 +174,8 @@ int main(int argc, char* argv[]) try {
 
     auto player = entities.create_entity();
     entities.create_component(player, component::position{20,20});
+    //entities.create_component(player, component::velocity{});
+    entities.create_component(player, component::aabb{-8,8,-8,8});
     entities.create_component(player, component::animated_sprite{"knight", "idle", 0, 0});
 
     auto enemythink = [&](database::ent_id self){
@@ -288,6 +290,78 @@ int main(int argc, char* argv[]) try {
              entities.visit([&](component::brain& brain, database::ent_id self) {
                 brain.think(self);
              });
+
+            entities.visit([&](component::position& pos, const component::velocity& vel) {
+                pos.x += vel.x;
+                pos.y += vel.y;
+            });
+
+            entities.visit([&](component::position& pos, const component::aabb& aabb){
+                {
+                    auto r = int(pos.y + aabb.bottom) / 16;
+                    auto c = int(pos.x + aabb.left) / 16;
+                    auto rp = pos.y + aabb.bottom - r * 16;
+                    auto cp = pos.x + aabb.left - c * 16;
+
+                    if (r >= 0 && c >= 0 && r < test_stage.get_num_rows() && c < test_stage.get_num_cols()) {
+                        if (test_stage.get(r, c).flags & tilemap::WALL) {
+                            if (rp > cp) {
+                                pos.y += 16 - rp;
+                            } else {
+                                pos.x += 16 - cp;
+                            }
+                        }
+                    }
+                }
+                {
+                    auto r = int(pos.y + aabb.bottom) / 16;
+                    auto c = int(pos.x + aabb.right) / 16;
+                    auto rp = pos.y + aabb.bottom - r * 16;
+                    auto cp = pos.x + aabb.right - c * 16;
+
+                    if (r >= 0 && c >= 0 && r < test_stage.get_num_rows() && c < test_stage.get_num_cols()) {
+                        if (test_stage.get(r, c).flags & tilemap::WALL) {
+                            if (rp > (16-cp)) {
+                                pos.y += 16 - rp;
+                            } else {
+                                pos.x -= cp;
+                            }
+                        }
+                    }
+                }
+                {
+                    auto r = int(pos.y + aabb.top) / 16;
+                    auto c = int(pos.x + aabb.left) / 16;
+                    auto rp = pos.y + aabb.top - r * 16;
+                    auto cp = pos.x + aabb.left - c * 16;
+
+                    if (r >= 0 && c >= 0 && r < test_stage.get_num_rows() && c < test_stage.get_num_cols()) {
+                        if (test_stage.get(r, c).flags & tilemap::WALL) {
+                            if ((16-rp) > cp) {
+                                pos.y -= rp;
+                            } else {
+                                pos.x += 16 - cp;
+                            }
+                        }
+                    }
+                }
+                {
+                    auto r = int(pos.y + aabb.top) / 16;
+                    auto c = int(pos.x + aabb.right) / 16;
+                    auto rp = pos.y + aabb.top - r * 16;
+                    auto cp = pos.x + aabb.right - c * 16;
+
+                    if (r >= 0 && c >= 0 && r < test_stage.get_num_rows() && c < test_stage.get_num_cols()) {
+                        if (test_stage.get(r, c).flags & tilemap::WALL) {
+                            if (rp < cp) {
+                                pos.y -= rp;
+                            } else {
+                                pos.x -= cp;
+                            }
+                        }
+                    }
+                }
+            });
 
             entities.visit([&](const component::position& pos, component::animated_sprite& sprite) {
                 auto animation = resources::animated_sprites.get(sprite.name);

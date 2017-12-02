@@ -27,6 +27,18 @@ struct brain{
     std::function <void(database::ent_id)> think;
 };
 
+struct aabb {
+    float left;
+    float right;
+    float bottom;
+    float top;
+};
+
+struct velocity {
+    float x;
+    float y;
+};
+
 } //namespace component
 
 namespace scripting {
