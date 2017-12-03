@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) try {
     {
         auto enemy = entities.create_entity();
         entities.create_component(enemy, component::position{float(elf[0])*16+8, float(elf[1])*16+8});
-        entities.create_component(enemy, component::animated_sprite{"knight", "idle", 0, 0});
+        entities.create_component(enemy, component::animated_sprite{"elf", "idle", 0, 0});
         entities.create_component(enemy, component::brain{enemythink});
         entities.create_component(enemy, component::aabb{-8, 8, -8, 8});
     }
