@@ -200,25 +200,10 @@ int main(int argc, char* argv[]) try {
             dirx /= dirm;
             diry /= dirm;
 
-            std::clog << "    dirx: " << dirx << std::endl;
-            std::clog << "    diry: " << diry << std::endl;
-            std::clog << "    dirm: " << dirm << std::endl;
-            std::clog << "    centerx: " << centerx << std::endl;
-            std::clog << "    centery: " << centery << std::endl;
-            std::clog << "    ppos.x: " << ppos.x << std::endl;
-            std::clog << "    ppos.y: " << ppos.y << std::endl;
-            std::clog << "    epos.x: " << epos.x << std::endl;
-            std::clog << "    epos.y: " << epos.y << std::endl;
-
             ppos.x = centerx + dirx*16;
             ppos.y = centery + diry*16;
             epos.x = centerx - dirx*16;
             epos.y = centery - diry*16;
-
-            std::clog << "    new ppos.x: " << ppos.x << std::endl;
-            std::clog << "    new ppos.y: " << ppos.y << std::endl;
-            std::clog << "    new epos.x: " << epos.x << std::endl;
-            std::clog << "    new epos.y: " << epos.y << std::endl;
         }
     };
     entities.create_component(player, component::collider{player_collider});
