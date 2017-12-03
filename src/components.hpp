@@ -67,6 +67,16 @@ struct timed_force {
     int duration;
 };
 
+struct booze {
+    int value;
+};
+
+struct drunken {
+    int bac;
+    float wander_x;
+    float wander_y;
+};
+
 } //namespace component
 
 namespace scripting {

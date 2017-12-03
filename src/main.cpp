@@ -29,6 +29,7 @@
 #include <functional>
 #include <thread>
 #include <chrono>
+#include <random>
 
 #ifdef __EMSCRIPTEN__
 const auto vertexSource = R"(
@@ -170,16 +171,27 @@ int main(int argc, char* argv[]) try {
 
     std::clog << "Creating data structures..." << std::endl;
 
-    database entities;
+    auto rng = std::mt19937{std::random_device{}()};
+    auto roll = [&](int low, int high) {
+        auto dist = std::uniform_int_distribution<int>(low, high);
+        return dist(rng);
+    };
+    auto rollf = [&](float low, float high) {
+        auto dist = std::uniform_real_distribution<float>(low, high);
+        return dist(rng);
+    };
 
+    database entities;
+    auto deadentities = std::vector<database::ent_id>();
+
+    std::clog << "Creating player..." << std::endl;
     auto player = entities.create_entity();
     entities.create_component(player, component::position{20,20});
     entities.create_component(player, component::velocity{0, 0});
     entities.create_component(player, component::aabb{-8,8,-8,8});
-
+    entities.create_component(player, component::drunken{});
     // Default fist direction
     entities.create_component(player, component::fistdir::RIGHT);
-
     entities.create_component(player, component::health{3});
     entities.create_component(player, component::animated_sprite{"tipsy", "idle", 0, 0});
 
@@ -202,6 +214,12 @@ int main(int argc, char* argv[]) try {
 
             entities.create_component(self, component::timed_force{dirx*8, diry*8, 5});
             entities.create_component(other, component::timed_force{-dirx*8, -diry*8, 5});
+        } else if (entities.has_component<component::booze>(other)) {
+            auto& booze = entities.get_component<component::booze>(other);
+            auto& drunk = entities.get_component<component::drunken>(self);
+
+            drunk.bac += booze.value;
+            deadentities.push_back(other);
         }
     };
     entities.create_component(player, component::collider{player_collider});
@@ -245,8 +263,12 @@ int main(int argc, char* argv[]) try {
         self_pos.y += diry;
     };
 
+    std::clog << "Creating framebuffers..." << std::endl;
+
     auto framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     auto framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
+
+    std::clog << "Loading stage..." << std::endl;
 
     auto tiles_texture = resources::textures.get("tiles");
     auto tilesheet = spritesheet(tiles_texture, 16, 16);
@@ -260,17 +282,24 @@ int main(int argc, char* argv[]) try {
     for(auto& elf : test_stage_json["elves"])
     {
         auto enemy = entities.create_entity();
-        entities.create_component(enemy, component::position{float(elf[0])*16+8, float(elf[1])*16+8});
+        entities.create_component(enemy, component::position{float(elf[1])*16+8, float(elf[0])*16+8});
         entities.create_component(enemy, component::animated_sprite{"elf", "idle", 0, 0});
         entities.create_component(enemy, component::brain{enemythink});
         entities.create_component(enemy, component::aabb{-8, 8, -8, 8});
         entities.create_component(enemy, component::elf_tag{});
     }
 
+    for (auto& beerjson : test_stage_json["beers"])
+    {
+        auto ent = entities.create_entity();
+        entities.create_component(ent, component::position{float(beerjson[1])*16+8, float(beerjson[0])*16+8});
+        entities.create_component(ent, component::animated_sprite{"beer", "idle", 0, 0});
+        entities.create_component(ent, component::aabb{-8, 8, -8, 8});
+        entities.create_component(ent, component::booze{1});
+    }
+
     auto last_update = std::chrono::steady_clock::now();
     auto frame_delay = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(1)) / 60;
-
-    auto deadentities = std::vector<database::ent_id>();
 
     auto game_loop = [&]{
         SDL_Event event;
@@ -413,6 +442,29 @@ int main(int argc, char* argv[]) try {
                     pos.x += force.x;
                     pos.y += force.y;
                 }
+            });
+
+            entities.visit([&](component::position& pos, component::drunken& drunken) {
+                constexpr auto SWAY_FACTOR = 1.f / 5.f;
+                constexpr auto DRUNK_FACTOR = 1.f / 5.f;
+
+                auto roll_x = (rollf(0,5) + rollf(0,5) - 5) / 5;
+                auto roll_y = (rollf(0,5) + rollf(0,5) - 5) / 5;
+                static_assert(std::is_same<decltype(roll_x), float>::value, "no float");
+
+                if (roll_x < 0) {
+                    drunken.wander_x += (drunken.wander_x + 1) * roll_x * SWAY_FACTOR;
+                } else {
+                    drunken.wander_x += (1 - drunken.wander_x) * roll_x * SWAY_FACTOR;
+                }
+                if (roll_y < 0) {
+                    drunken.wander_y += (drunken.wander_y + 1) * roll_y * SWAY_FACTOR;
+                } else {
+                    drunken.wander_y += (1 - drunken.wander_y) * roll_y * SWAY_FACTOR;
+                }
+
+                pos.x += drunken.wander_x * drunken.bac * DRUNK_FACTOR;
+                pos.y += drunken.wander_y * drunken.bac * DRUNK_FACTOR;
             });
 
             entities.visit([&](component::position& pos, const component::velocity& vel) {
