@@ -1,0 +1,12 @@
+{
+	"sprite_width": 16,
+	"sprite_height": 16,
+	"anims": {
+		"idle": {
+			"loops": true,
+			"frames": [
+				[0, 30]
+			]
+		}
+	}
+}
