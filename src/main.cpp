@@ -91,9 +91,13 @@ const auto fragmentSource = R"(#version 400
 )";
 #endif
 
-std::function<void()> loop;
+std::vector<std::function<void()>> states;
 void main_loop() {
-    loop();
+    if (states.empty()) {
+        platform::cancel_main_loop();
+    } else {
+        states.back()();
+    }
 }
 
 int main(int argc, char* argv[]) try {
@@ -694,7 +698,7 @@ int main(int argc, char* argv[]) try {
                 platform::cancel_main_loop();
                 return;
             case SDL_KEYDOWN:
-                loop = game_loop;
+                states.push_back(game_loop);
                 break;
             }
         }
@@ -751,7 +755,7 @@ int main(int argc, char* argv[]) try {
     std::clog << "Init Success." << std::endl;
 
     std::clog << "Starting main loop..." << std::endl;
-    loop = mainmenu_loop;
+    states.push_back(mainmenu_loop);
     platform::do_main_loop(main_loop, 0, 1);
 
     std::clog << "Cleaning up..." << std::endl;
