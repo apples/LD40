@@ -395,8 +395,9 @@ int main(int argc, char* argv[]) try {
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glViewport(0, 0, 320, 240);
 
-            auto projmat = glm::ortho(0.f, 640.f, 0.f, 480.f, -10.f, 10.f);
+            auto projmat = glm::ortho(0.f, 320.f, 0.f, 240.f, -10.f, 10.f);
 
             // View matrix for camera
             // Camera should invert the player matrix to follow the player around
@@ -652,6 +653,7 @@ int main(int argc, char* argv[]) try {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_BLEND);
+            glViewport(0, 0, 640, 480);
 
             auto projmat = glm::ortho(-160.f, 160.f, -120.f, 120.f, -1.f, 1.f);
             auto modelmat = glm::mat4(1.f);
@@ -679,10 +681,77 @@ int main(int argc, char* argv[]) try {
 #endif
     };
 
+    auto mainmenu_tex = resources::textures.get("mainmenu");
+    auto mainmenu_mesh = sprite_mesh(*mainmenu_tex);
+
+    auto mainmenu_loop = [&]{
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            switch (event.type) {
+            case SDL_QUIT:
+                std::clog << "Goodbye!" << std::endl;
+                platform::cancel_main_loop();
+                return;
+            case SDL_KEYDOWN:
+                loop = game_loop;
+                break;
+            }
+        }
+
+        sushi::set_framebuffer(framebuffer);
+        {
+            glClearColor(0,0,0,1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glViewport(0, 0, 320, 240);
+
+            auto projmat = glm::ortho(0.f, 320.f, 0.f, 240.f, -10.f, 10.f);
+            auto modelmat = glm::mat4(1.f);
+            modelmat = glm::translate(modelmat, glm::vec3{160, 120, 0});
+            sushi::set_program(program);
+            sushi::set_uniform("MVP", projmat * modelmat);
+            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+            sushi::set_uniform("s_texture", 0);
+            sushi::set_texture(0, *mainmenu_tex);
+            sushi::draw_mesh(mainmenu_mesh);
+        }
+
+        sushi::set_framebuffer(nullptr);
+        {
+            glClearColor(0,0,0,1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_BLEND);
+            glViewport(0, 0, 640, 480);
+
+            auto projmat = glm::ortho(-160.f, 160.f, 120.f, -120.f, -1.f, 1.f);
+            auto modelmat = glm::mat4(1.f);
+            sushi::set_program(program);
+            sushi::set_uniform("MVP", projmat * modelmat);
+            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+            sushi::set_uniform("s_texture", 0);
+            sushi::set_texture(0, framebuffer.color_texs[0]);
+            sushi::draw_mesh(framebuffer_mesh);
+        }
+
+        SDL_GL_SwapWindow(g_window);
+
+#ifdef __EMSCRIPTEN__
+#else
+        std::this_thread::sleep_until(last_update + frame_delay);
+        last_update = std::chrono::steady_clock::now();
+#endif
+    };
+
     std::clog << "Init Success." << std::endl;
 
     std::clog << "Starting main loop..." << std::endl;
-    loop = game_loop;
+    loop = mainmenu_loop;
     platform::do_main_loop(main_loop, 0, 1);
 
     std::clog << "Cleaning up..." << std::endl;
