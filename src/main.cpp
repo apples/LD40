@@ -200,13 +200,35 @@ int main(int argc, char* argv[]) try {
             dirx /= dirm;
             diry /= dirm;
 
-            ppos.x = centerx + dirx*16;
-            ppos.y = centery + diry*16;
-            epos.x = centerx - dirx*16;
-            epos.y = centery - diry*16;
+            entities.create_component(self, component::timed_force{dirx*8, diry*8, 5});
+            entities.create_component(other, component::timed_force{-dirx*8, -diry*8, 5});
         }
     };
     entities.create_component(player, component::collider{player_collider});
+
+    // fist needs to punch elves
+    auto fist_collider = [&](database::ent_id self, database::ent_id other) {
+        if (entities.has_component<component::elf_tag>(other)) {
+            auto dir = entities.get_component<component::fistdir>(self);
+            auto force = component::timed_force{};
+            switch (dir) {
+            case component::fistdir::LEFT:
+                force.x = -10;
+                break;
+            case component::fistdir::RIGHT:
+                force.x = 10;
+                break;
+            case component::fistdir::DOWN:
+                force.y = -10;
+                break;
+            case component::fistdir::UP:
+                force.y = 10;
+                break;
+            }
+            force.duration = 10;
+            entities.create_component(other, force);
+        }
+    };
 
     auto enemythink = [&](database::ent_id self){
         auto& self_pos = entities.get_component<component::position>(self);
@@ -276,9 +298,14 @@ int main(int argc, char* argv[]) try {
                          auto fist = entities.create_entity();
                          entities.create_component(fist, component::fisttimer{fistfps, 20});
                          entities.create_component(fist, component::aabb{-8, 8, -8, 8});
+                         entities.create_component(fist, component::collider{fist_collider});
                          entities.create_component(fist, player_vel);
 
-                         switch (entities.get_component<component::fistdir>(player)) {
+                         auto dir = entities.get_component<component::fistdir>(player);
+
+                         entities.create_component(fist, dir);
+
+                         switch (dir) {
                             case component::fistdir::RIGHT:
                                 entities.create_component(fist, component::position{player_pos.x+16, player_pos.y});
                                 entities.create_component(fist, component::animated_sprite{"rightfist", "idle", 0, 0});
@@ -378,6 +405,15 @@ int main(int argc, char* argv[]) try {
                 brain.think(self);
             });
 
+            entities.visit([&](component::position& pos, component::timed_force& force, database::ent_id self) {
+                if (--force.duration <= 0) {
+                    entities.destroy_component<component::timed_force>(self);
+                } else {
+                    pos.x += force.x;
+                    pos.y += force.y;
+                }
+            });
+
             entities.visit([&](component::position& pos, const component::velocity& vel) {
                 pos.x += vel.x;
                 pos.y += vel.y;
@@ -385,7 +421,7 @@ int main(int argc, char* argv[]) try {
 
             entities.visit([&](component::fisttimer& timer, database::ent_id self) {
                 --timer.duration;
-                if(timer.duration <= 0)
+                if(timer.duration == 0)
                 {
                     timer.timer(self);
                 }
