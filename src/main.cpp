@@ -193,22 +193,26 @@ int main(int argc, char* argv[]) try {
         self_pos.y += diry;
     };
 
-    auto enemy = entities.create_entity();
-    entities.create_component(enemy, component::position{100,100});
-    entities.create_component(enemy, component::animated_sprite{"knight", "idle", 0, 0});
-    entities.create_component(enemy, component::brain{enemythink});
-
     auto framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     auto framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
     auto tiles_texture = resources::textures.get("tiles");
-    auto tilesheet = spritesheet(tiles_texture, 16, 16);
+    auto tilesheet = spritesheet(tiles_texture, 16, 16);       
 
     std::ifstream test_stage_file ("data/stages/test.json");
     nlohmann::json test_stage_json;
     test_stage_file >> test_stage_json;
     test_stage_file.close();
     auto test_stage = tilemap::tilemap(test_stage_json);
+
+    for(auto& elf : test_stage_json["elves"])
+    {
+        auto enemy = entities.create_entity();
+        entities.create_component(enemy, component::position{float(elf[0])*16+8, float(elf[1])*16+8});
+        entities.create_component(enemy, component::animated_sprite{"knight", "idle", 0, 0});
+        entities.create_component(enemy, component::brain{enemythink});
+        entities.create_component(enemy, component::aabb{-8, 8, -8, 8});
+    }
 
     auto last_update = std::chrono::steady_clock::now();
     auto frame_delay = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(1)) / 60;
