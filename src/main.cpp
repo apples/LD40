@@ -177,6 +177,9 @@ int main(int argc, char* argv[]) try {
     //entities.create_component(player, component::velocity{});
     entities.create_component(player, component::aabb{-8,8,-8,8});
 
+    // Default fist direction
+    entities.create_component(player, component::fistdir::RIGHT);
+
     entities.create_component(player, component::health{3});
     entities.create_component(player, component::animated_sprite{"tipsy", "idle", 0, 0});
 
@@ -223,6 +226,7 @@ int main(int argc, char* argv[]) try {
 
     auto game_loop = [&]{
         SDL_Event event;
+        auto& player_pos = entities.get_component<component::position>(player);
         while (SDL_PollEvent(&event))
         {
             switch (event.type) {
@@ -230,67 +234,71 @@ int main(int argc, char* argv[]) try {
                     std::clog << "Goodbye!" << std::endl;
                     platform::cancel_main_loop();
                     return;
+                case SDL_KEYDOWN:
+                    if(event.key.repeat == 0)
+                    {
+                    switch(event.key.keysym.scancode) {
+                    //Fist animation spawn on spacebar
+                    case SDL_SCANCODE_SPACE: {
+                         auto fistfps = [&](database::ent_id self){
+                             auto& timer = entities.get_component<component::fisttimer>(self);
+                             deadentities.push_back(self);
+                         };
+
+                         auto fist = entities.create_entity();
+                         entities.create_component(fist, component::fisttimer{fistfps, 20});
+                         entities.create_component(fist, component::aabb{-8, 8, -8, 8});
+
+                         switch (entities.get_component<component::fistdir>(player)) {
+                            case component::fistdir::RIGHT:
+                                entities.create_component(fist, component::position{player_pos.x+16, player_pos.y});
+                                entities.create_component(fist, component::animated_sprite{"rightfist", "idle", 0, 0});
+                                return;
+
+                            case component::fistdir::LEFT:
+                                entities.create_component(fist, component::position{player_pos.x-16, player_pos.y});
+                                entities.create_component(fist, component::animated_sprite{"leftfist", "idle", 0, 0});
+                                return;
+
+                            case component::fistdir::UP:
+                                entities.create_component(fist, component::position{player_pos.x, player_pos.y+16});
+                                entities.create_component(fist, component::animated_sprite{"upfist", "idle", 0, 0});
+                                return;
+
+                            case component::fistdir::DOWN:
+                                entities.create_component(fist, component::position{player_pos.x, player_pos.y-16});
+                                entities.create_component(fist, component::animated_sprite{"downfist", "idle", 0, 0});
+                                return;
+                         }
+                    } break;
+                }
+                    }
             }
         }
 
-        const Uint8 *keys = SDL_GetKeyboardState(NULL);
-
-        auto& player_pos = entities.get_component<component::position>(player);
+        const Uint8 *keys = SDL_GetKeyboardState(NULL);       
 
         //Player moment based on keys
         if (keys[SDL_SCANCODE_LEFT]) {
             player_pos.x -= 1;
+            entities.create_component(player, component::fistdir::LEFT);
         }
 
         if (keys[SDL_SCANCODE_RIGHT]) {
-            player_pos.x += 1;
+            player_pos.x += 1;            
+            entities.create_component(player, component::fistdir::RIGHT);
         }
 
         if (keys[SDL_SCANCODE_DOWN]) {
             player_pos.y -= 1;
+            entities.create_component(player, component::fistdir::DOWN);
         }
 
         if (keys[SDL_SCANCODE_UP]) {
             player_pos.y += 1;
+            entities.create_component(player, component::fistdir::UP);
         }
 
-        //Fist animation spawn on spacebar
-        if(keys[SDL_SCANCODE_SPACE]){
-             auto fistfps = [&](database::ent_id self){
-                 auto& timer = entities.get_component<component::fisttimer>(self);
-                 deadentities.push_back(self);
-             };
-
-             auto rightfist = entities.create_entity();
-             entities.create_component(rightfist, component::position{player_pos.x+16, player_pos.y});
-             entities.create_component(rightfist, component::animated_sprite{"rightfist", "idle", 0, 0});
-             entities.create_component(rightfist, component::fisttimer{fistfps, 20});
-             entities.create_component(rightfist, component::aabb{-8, 8, -8, 8});
-             entities.create_component(rightfist, component::fistdir::RIGHT);
-
-             auto leftfist = entities.create_entity();
-             entities.create_component(leftfist, component::position{player_pos.x-16, player_pos.y});
-             entities.create_component(leftfist, component::animated_sprite{"leftfist", "idle", 0, 0});
-             entities.create_component(leftfist, component::fisttimer{fistfps, 20});
-             entities.create_component(leftfist, component::aabb{-8, 8, -8, 8});
-             entities.create_component(leftfist, component::fistdir::LEFT);
-
-             auto upfist = entities.create_entity();
-             entities.create_component(upfist, component::position{player_pos.x, player_pos.y+16});
-             entities.create_component(upfist, component::animated_sprite{"upfist", "idle", 0, 0});
-             entities.create_component(upfist, component::fisttimer{fistfps, 20});
-             entities.create_component(upfist, component::aabb{-8, 8, -8, 8});
-             entities.create_component(upfist, component::fistdir::UP);
-
-             auto downfist = entities.create_entity();
-             entities.create_component(downfist, component::position{player_pos.x, player_pos.y-16});
-             entities.create_component(downfist, component::animated_sprite{"downfist", "idle", 0, 0});
-             entities.create_component(downfist, component::fisttimer{fistfps, 20});
-             entities.create_component(downfist, component::aabb{-8, 8, -8, 8});
-             entities.create_component(downfist, component::fistdir::DOWN);
-
-
-        }
         sushi::set_framebuffer(framebuffer);
         {
             glClearColor(0,0,0,1);
