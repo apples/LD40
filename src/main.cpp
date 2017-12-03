@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) try {
     std::clog << "    GLSL version: " << (char*)glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 
     std::clog << "Loading fonts..." << std::endl;
-    auto font = msdf_font("LiberationSans-Regular");
+    auto font = resources::fonts.get("LiberationSans-Regular");
 
     std::clog << "Init Success." << std::endl;
 

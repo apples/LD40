@@ -36,4 +36,9 @@ resource_cache<spritesheet, std::string, int, int> spritesheets ([](const std::s
     return spritesheet(texture, w, h);
 });
 
+resource_cache<msdf_font, std::string> fonts ([](const std::string& name) {
+    std::clog << "Loading font: " << name << std::endl;
+    return msdf_font(name);
+});
+
 } //namespace resources

@@ -4,6 +4,7 @@
 #include "resource_cache.hpp"
 #include "animated_sprite.hpp"
 #include "spritesheet.hpp"
+#include "font.hpp"
 
 #include <sushi/texture.hpp>
 #include <sushi/mesh.hpp>
@@ -23,6 +24,8 @@ extern resource_cache<SoLoud::Wav, std::string> wavs;
 extern resource_cache<animated_sprite, std::string> animated_sprites;
 
 extern resource_cache<spritesheet, std::string, int, int> spritesheets;
+
+extern resource_cache<msdf_font, std::string> fonts;
 
 } //namespace resources
 
