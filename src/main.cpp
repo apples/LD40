@@ -309,26 +309,27 @@ int main(int argc, char* argv[]) try {
                             case component::fistdir::RIGHT:
                                 entities.create_component(fist, component::position{player_pos.x+16, player_pos.y});
                                 entities.create_component(fist, component::animated_sprite{"rightfist", "idle", 0, 0});
-                                return;
+                                break;
 
                             case component::fistdir::LEFT:
                                 entities.create_component(fist, component::position{player_pos.x-16, player_pos.y});
                                 entities.create_component(fist, component::animated_sprite{"leftfist", "idle", 0, 0});
-                                return;
+                                break;
 
                             case component::fistdir::UP:
                                 entities.create_component(fist, component::position{player_pos.x, player_pos.y+16});
                                 entities.create_component(fist, component::animated_sprite{"upfist", "idle", 0, 0});
-                                return;
+                                break;
 
                             case component::fistdir::DOWN:
                                 entities.create_component(fist, component::position{player_pos.x, player_pos.y-16});
                                 entities.create_component(fist, component::animated_sprite{"downfist", "idle", 0, 0});
-                                return;
+                                break;
                          }
                     } break;
-                }
                     }
+                    }
+                    break;
             }
         }
 
@@ -393,8 +394,8 @@ int main(int argc, char* argv[]) try {
                         }
                         if (tile.flags & tilemap::FOREGROUND) {
                             auto raised_modelmat = glm::translate(modelmat, glm::vec3{0, 0, 1});
-                            sushi::set_uniform("MVP", projmat * cammat * modelmat);
-                            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                            sushi::set_uniform("MVP", projmat * cammat * raised_modelmat);
+                            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(cammat * raised_modelmat)));
                             sushi::draw_mesh(tilesheet.get_mesh(tile.foreground/16, tile.foreground%16));
                         }
                     }
