@@ -752,7 +752,7 @@ int main(int argc, char* argv[]) try {
 
     std::clog << "Starting main loop..." << std::endl;
     loop = mainmenu_loop;
-    platform::do_main_loop(main_loop, 0, 1);
+    platform::do_main_loop(main_loop, 60, 1);
 
     std::clog << "Cleaning up..." << std::endl;
     soloud.deinit();
