@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) try {
 
     auto player = entities.create_entity();
     entities.create_component(player, component::position{20,20});
-    //entities.create_component(player, component::velocity{});
+    entities.create_component(player, component::velocity{0, 0});
     entities.create_component(player, component::aabb{-8,8,-8,8});
 
     // Default fist direction
@@ -182,6 +182,46 @@ int main(int argc, char* argv[]) try {
 
     entities.create_component(player, component::health{3});
     entities.create_component(player, component::animated_sprite{"tipsy", "idle", 0, 0});
+
+    // player handles most collisions
+    auto player_collider = [&](database::ent_id self, database::ent_id other) {
+        std::clog << "Player collided with something." << std::endl;
+        if (entities.has_component<component::elf_tag>(other)) {
+            std::clog << "    It was an elf!" << std::endl;
+            auto& ppos = entities.get_component<component::position>(self);
+            auto& epos = entities.get_component<component::position>(other);
+
+            auto centerx = (ppos.x + epos.x) / 2;
+            auto centery = (ppos.y + epos.y) / 2;
+
+            auto dirx = ppos.x - epos.x;
+            auto diry = ppos.y - epos.y;
+            auto dirm = std::sqrt(dirx*dirx + diry*diry);
+            dirx /= dirm;
+            diry /= dirm;
+
+            std::clog << "    dirx: " << dirx << std::endl;
+            std::clog << "    diry: " << diry << std::endl;
+            std::clog << "    dirm: " << dirm << std::endl;
+            std::clog << "    centerx: " << centerx << std::endl;
+            std::clog << "    centery: " << centery << std::endl;
+            std::clog << "    ppos.x: " << ppos.x << std::endl;
+            std::clog << "    ppos.y: " << ppos.y << std::endl;
+            std::clog << "    epos.x: " << epos.x << std::endl;
+            std::clog << "    epos.y: " << epos.y << std::endl;
+
+            ppos.x = centerx + dirx*16;
+            ppos.y = centery + diry*16;
+            epos.x = centerx - dirx*16;
+            epos.y = centery - diry*16;
+
+            std::clog << "    new ppos.x: " << ppos.x << std::endl;
+            std::clog << "    new ppos.y: " << ppos.y << std::endl;
+            std::clog << "    new epos.x: " << epos.x << std::endl;
+            std::clog << "    new epos.y: " << epos.y << std::endl;
+        }
+    };
+    entities.create_component(player, component::collider{player_collider});
 
     auto enemythink = [&](database::ent_id self){
         auto& self_pos = entities.get_component<component::position>(self);
@@ -202,7 +242,7 @@ int main(int argc, char* argv[]) try {
     auto framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
     auto tiles_texture = resources::textures.get("tiles");
-    auto tilesheet = spritesheet(tiles_texture, 16, 16);       
+    auto tilesheet = spritesheet(tiles_texture, 16, 16);
 
     std::ifstream test_stage_file ("data/stages/test.json");
     nlohmann::json test_stage_json;
@@ -217,6 +257,7 @@ int main(int argc, char* argv[]) try {
         entities.create_component(enemy, component::animated_sprite{"elf", "idle", 0, 0});
         entities.create_component(enemy, component::brain{enemythink});
         entities.create_component(enemy, component::aabb{-8, 8, -8, 8});
+        entities.create_component(enemy, component::elf_tag{});
     }
 
     auto last_update = std::chrono::steady_clock::now();
@@ -341,9 +382,9 @@ int main(int argc, char* argv[]) try {
                 }
             }
 
-             entities.visit([&](component::brain& brain, database::ent_id self) {
+            entities.visit([&](component::brain& brain, database::ent_id self) {
                 brain.think(self);
-             });
+            });
 
             entities.visit([&](component::position& pos, const component::velocity& vel) {
                 pos.x += vel.x;
@@ -356,6 +397,24 @@ int main(int argc, char* argv[]) try {
                 {
                     timer.timer(self);
                 }
+            });
+
+            entities.visit([&](database::ent_id eidA, component::collider& collider, component::position& posA, const component::aabb& aabbA) {
+                auto a_left = posA.x + aabbA.left;
+                auto a_right = posA.x + aabbA.right;
+                auto a_bottom = posA.y + aabbA.bottom;
+                auto a_top = posA.y + aabbA.top;
+                entities.visit([&](database::ent_id eidB, component::position& posB, const component::aabb& aabbB) {
+                    if (eidA == eidB) return;
+                    auto b_left = posB.x + aabbB.left;
+                    auto b_right = posB.x + aabbB.right;
+                    auto b_bottom = posB.y + aabbB.bottom;
+                    auto b_top = posB.y + aabbB.top;
+
+                    if (a_left < b_right && a_right > b_left && a_bottom < b_top && a_top > b_bottom) {
+                        collider.act(eidA, eidB);
+                    }
+                });
             });
 
             entities.visit([&](component::position& pos, component::aabb aabb){
@@ -466,9 +525,43 @@ int main(int argc, char* argv[]) try {
                 sushi::draw_mesh(mesh);
             });
 
-            auto& phealth = entities.get_component<component::health>(player);
-            for (int i = 0; i < phealth.value; ++i) {
-                draw_string(font, "+", projmat, glm::vec2{float(8*i), float(240-16)}, 16, text_align::LEFT);
+            {
+                auto& phealth = entities.get_component<component::health>(player);
+                auto wholeheart = resources::spritesheets.get("wholeheart", 9, 9);
+                auto halfheart = resources::spritesheets.get("halfheart", 9, 9);
+                auto emptyheart = resources::spritesheets.get("emptyheart", 9, 9);
+                auto modelmat = glm::mat4(1.f);
+                modelmat = glm::translate(modelmat, glm::vec3{5, 240-6, 0});
+                for (int i = 0; i < phealth.value/2; ++i) {
+                    sushi::set_program(program);
+                    sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+                    sushi::set_uniform("s_texture", 0);
+                    sushi::set_uniform("MVP", projmat * modelmat);
+                    sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                    sushi::set_texture(0, wholeheart->get_texture());
+                    sushi::draw_mesh(wholeheart->get_mesh(0,0));
+                    modelmat = glm::translate(modelmat, glm::vec3{9, 0, 0});
+                }
+                for (int i = 0; i < phealth.value%2; ++i) {
+                    sushi::set_program(program);
+                    sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+                    sushi::set_uniform("s_texture", 0);
+                    sushi::set_uniform("MVP", projmat * modelmat);
+                    sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                    sushi::set_texture(0, halfheart->get_texture());
+                    sushi::draw_mesh(halfheart->get_mesh(0,0));
+                    modelmat = glm::translate(modelmat, glm::vec3{9, 0, 0});
+                }
+                for (int i = 0; i < (6-phealth.value)/2; ++i) {
+                    sushi::set_program(program);
+                    sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+                    sushi::set_uniform("s_texture", 0);
+                    sushi::set_uniform("MVP", projmat * modelmat);
+                    sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+                    sushi::set_texture(0, emptyheart->get_texture());
+                    sushi::draw_mesh(emptyheart->get_mesh(0,0));
+                    modelmat = glm::translate(modelmat, glm::vec3{9, 0, 0});
+                }
             }
         }
 

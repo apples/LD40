@@ -21,13 +21,19 @@ resource_cache<SoLoud::Wav, std::string> wavs ([](const std::string& name) {
     return wav;
 });
 
-extern resource_cache<animated_sprite, std::string> animated_sprites ([](const std::string& name) {
+resource_cache<animated_sprite, std::string> animated_sprites ([](const std::string& name) {
     std::clog << "Loading anim: " << name << std::endl;
     auto texture = textures.get(name);
     std::ifstream jsonfile ("data/anims/"+name+".json");
     nlohmann::json json;
     jsonfile >> json;
     return animated_sprite(json, texture);
+});
+
+resource_cache<spritesheet, std::string, int, int> spritesheets ([](const std::string& name, int w, int h) {
+    std::clog << "Loading sheet: (" << name << ", " << w << ", " << h << ")" << std::endl;
+    auto texture = textures.get(name);
+    return spritesheet(texture, w, h);
 });
 
 } //namespace resources

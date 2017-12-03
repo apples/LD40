@@ -641,6 +641,10 @@ class opaque_index {
 public:
     opaque_index() = default;
 
+    bool operator==(const opaque_index& other) {
+        return index == other.index;
+    }
+
 private:
     friend Friend;
 

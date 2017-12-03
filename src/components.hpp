@@ -24,7 +24,7 @@ struct animated_sprite {
 };
 
 struct brain{
-    std::function <void(database::ent_id)> think;
+    std::function<void(database::ent_id)> think;
 };
 
 struct aabb {
@@ -54,6 +54,12 @@ struct fisttimer {
     std::function <void(database::ent_id)> timer;
     int duration;
 };
+
+struct collider {
+    std::function<void(database::ent_id, database::ent_id)> act;
+};
+
+using elf_tag = ginseng::tag<struct elf_tag_t>;
 
 } //namespace component
 
