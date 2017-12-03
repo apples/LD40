@@ -176,8 +176,9 @@ int main(int argc, char* argv[]) try {
     entities.create_component(player, component::position{20,20});
     //entities.create_component(player, component::velocity{});
     entities.create_component(player, component::aabb{-8,8,-8,8});
-    entities.create_component(player, component::animated_sprite{"knight", "idle", 0, 0});
+
     entities.create_component(player, component::health{3});
+    entities.create_component(player, component::animated_sprite{"tipsy", "idle", 0, 0});
 
     auto enemythink = [&](database::ent_id self){
         auto& self_pos = entities.get_component<component::position>(self);
@@ -189,7 +190,7 @@ int main(int argc, char* argv[]) try {
         float hyp = sqrt((dirx * dirx) +(diry * diry));
         dirx /= hyp;
         diry /= hyp;
-        // translate enemy to player position via the vectors.
+        // Translate enemy to player position via the vectors.
         self_pos.x += dirx;
         self_pos.y += diry;
     };
@@ -218,6 +219,8 @@ int main(int argc, char* argv[]) try {
     auto last_update = std::chrono::steady_clock::now();
     auto frame_delay = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(1)) / 60;
 
+    auto deadentities = std::vector<database::ent_id>();
+
     auto game_loop = [&]{
         SDL_Event event;
         while (SDL_PollEvent(&event))
@@ -234,6 +237,7 @@ int main(int argc, char* argv[]) try {
 
         auto& player_pos = entities.get_component<component::position>(player);
 
+        //Player moment based on keys
         if (keys[SDL_SCANCODE_LEFT]) {
             player_pos.x -= 1;
         }
@@ -250,6 +254,43 @@ int main(int argc, char* argv[]) try {
             player_pos.y += 1;
         }
 
+        //Fist animation spawn on spacebar
+        if(keys[SDL_SCANCODE_SPACE]){
+             auto fistfps = [&](database::ent_id self){
+                 auto& timer = entities.get_component<component::fisttimer>(self);
+                 deadentities.push_back(self);
+             };
+
+             auto rightfist = entities.create_entity();
+             entities.create_component(rightfist, component::position{player_pos.x+16, player_pos.y});
+             entities.create_component(rightfist, component::animated_sprite{"rightfist", "idle", 0, 0});
+             entities.create_component(rightfist, component::fisttimer{fistfps, 20});
+             entities.create_component(rightfist, component::aabb{-8, 8, -8, 8});
+             entities.create_component(rightfist, component::fistdir::RIGHT);
+
+             auto leftfist = entities.create_entity();
+             entities.create_component(leftfist, component::position{player_pos.x-16, player_pos.y});
+             entities.create_component(leftfist, component::animated_sprite{"leftfist", "idle", 0, 0});
+             entities.create_component(leftfist, component::fisttimer{fistfps, 20});
+             entities.create_component(leftfist, component::aabb{-8, 8, -8, 8});
+             entities.create_component(leftfist, component::fistdir::LEFT);
+
+             auto upfist = entities.create_entity();
+             entities.create_component(upfist, component::position{player_pos.x, player_pos.y+16});
+             entities.create_component(upfist, component::animated_sprite{"upfist", "idle", 0, 0});
+             entities.create_component(upfist, component::fisttimer{fistfps, 20});
+             entities.create_component(upfist, component::aabb{-8, 8, -8, 8});
+             entities.create_component(upfist, component::fistdir::UP);
+
+             auto downfist = entities.create_entity();
+             entities.create_component(downfist, component::position{player_pos.x, player_pos.y-16});
+             entities.create_component(downfist, component::animated_sprite{"downfist", "idle", 0, 0});
+             entities.create_component(downfist, component::fisttimer{fistfps, 20});
+             entities.create_component(downfist, component::aabb{-8, 8, -8, 8});
+             entities.create_component(downfist, component::fistdir::DOWN);
+
+
+        }
         sushi::set_framebuffer(framebuffer);
         {
             glClearColor(0,0,0,1);
@@ -301,13 +342,20 @@ int main(int argc, char* argv[]) try {
                 pos.y += vel.y;
             });
 
+            entities.visit([&](component::fisttimer& timer, database::ent_id self) {
+                --timer.duration;
+                if(timer.duration <= 0)
+                {
+                    timer.timer(self);
+                }
+            });
+
             entities.visit([&](component::position& pos, component::aabb aabb){
                 constexpr auto epsilon = 0.0001;
                 aabb.left += epsilon;
                 aabb.right -= epsilon;
                 aabb.bottom += epsilon;
                 aabb.top -= epsilon;
-
                 {
                     auto r = int(pos.y + aabb.bottom) / 16;
                     auto c = int(pos.x + aabb.left) / 16;
@@ -433,6 +481,12 @@ int main(int argc, char* argv[]) try {
             sushi::set_texture(0, framebuffer.color_texs[0]);
             sushi::draw_mesh(framebuffer_mesh);
         }
+
+        for(auto e : deadentities)
+        {
+            entities.destroy_entity(e);
+        }
+        deadentities.clear();
 
         SDL_GL_SwapWindow(g_window);
 

@@ -43,6 +43,18 @@ struct health {
     int value;
 };
 
+enum class fistdir {
+    RIGHT,
+    LEFT,
+    UP,
+    DOWN
+};
+
+struct fisttimer {
+    std::function <void(database::ent_id)> timer;
+    int duration;
+};
+
 } //namespace component
 
 namespace scripting {
