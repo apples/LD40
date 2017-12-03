@@ -287,8 +287,8 @@ void gameplay_state::operator()() {
             constexpr auto SWAY_FACTOR = 1.f / 5.f;
             constexpr auto DRUNK_FACTOR = 1.f / 5.f;
 
-            auto roll_x = (random::rollf(0,5) + random::rollf(0,5) - 5) / 5;
-            auto roll_y = (random::rollf(0,5) + random::rollf(0,5) - 5) / 5;
+            auto roll_x = (random_helpers::rollf(0,5) + random_helpers::rollf(0,5) - 5) / 5;
+            auto roll_y = (random_helpers::rollf(0,5) + random_helpers::rollf(0,5) - 5) / 5;
             static_assert(std::is_same<decltype(roll_x), float>::value, "no float");
 
             if (roll_x < 0) {

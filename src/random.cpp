@@ -1,6 +1,6 @@
 #include "random.hpp"
 
-namespace random {
+namespace random_helpers {
 
 std::mt19937& rng() {
     static std::mt19937 device {std::random_device{}()};

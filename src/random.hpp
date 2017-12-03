@@ -3,7 +3,7 @@
 
 #include <random>
 
-namespace random {
+namespace random_helpers {
 
 std::mt19937& rng();
 
