@@ -736,9 +736,10 @@ public:
      */
     template <typename T>
     com_id create_component(ent_id eid, T&& com) {
-        auto guid = get_type_guid<T>();
+        using com_type = std::decay_t<T>;
+        auto guid = get_type_guid<com_type>();
         auto& ent_coms = entities[eid].components;
-        auto& com_set = get_or_create_com_set<T>();
+        auto& com_set = get_or_create_com_set<com_type>();
 
         com_id cid;
 

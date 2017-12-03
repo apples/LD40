@@ -252,7 +252,6 @@ int main(int argc, char* argv[]) try {
 
     auto game_loop = [&]{
         SDL_Event event;
-        auto& player_pos = entities.get_component<component::position>(player);
         while (SDL_PollEvent(&event))
         {
             switch (event.type) {
@@ -266,6 +265,9 @@ int main(int argc, char* argv[]) try {
                     switch(event.key.keysym.scancode) {
                     //Fist animation spawn on spacebar
                     case SDL_SCANCODE_SPACE: {
+                        auto& player_pos = entities.get_component<component::position>(player);
+                        auto& player_vel = entities.get_component<component::velocity>(player);
+
                          auto fistfps = [&](database::ent_id self){
                              auto& timer = entities.get_component<component::fisttimer>(self);
                              deadentities.push_back(self);
@@ -274,6 +276,7 @@ int main(int argc, char* argv[]) try {
                          auto fist = entities.create_entity();
                          entities.create_component(fist, component::fisttimer{fistfps, 20});
                          entities.create_component(fist, component::aabb{-8, 8, -8, 8});
+                         entities.create_component(fist, player_vel);
 
                          switch (entities.get_component<component::fistdir>(player)) {
                             case component::fistdir::RIGHT:
@@ -305,23 +308,26 @@ int main(int argc, char* argv[]) try {
         const Uint8 *keys = SDL_GetKeyboardState(NULL);       
 
         //Player moment based on keys
+        auto& player_vel = entities.get_component<component::velocity>(player);
+        player_vel = {0,0};
+
         if (keys[SDL_SCANCODE_LEFT]) {
-            player_pos.x -= 1;
+            player_vel.x -= 1;
             entities.create_component(player, component::fistdir::LEFT);
         }
 
         if (keys[SDL_SCANCODE_RIGHT]) {
-            player_pos.x += 1;            
+            player_vel.x += 1;
             entities.create_component(player, component::fistdir::RIGHT);
         }
 
         if (keys[SDL_SCANCODE_DOWN]) {
-            player_pos.y -= 1;
+            player_vel.y -= 1;
             entities.create_component(player, component::fistdir::DOWN);
         }
 
         if (keys[SDL_SCANCODE_UP]) {
-            player_pos.y += 1;
+            player_vel.y += 1;
             entities.create_component(player, component::fistdir::UP);
         }
 
@@ -338,6 +344,7 @@ int main(int argc, char* argv[]) try {
             // View matrix for camera
             // Camera should invert the player matrix to follow the player around
             // x+80 y+60 centers the camera
+            auto& player_pos = entities.get_component<component::position>(player);
             auto cammat = glm::mat4(1.f);
             cammat = glm::translate(cammat, glm::vec3{-player_pos.x + 160, -player_pos.y + 120, 0});
 
