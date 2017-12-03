@@ -25,7 +25,7 @@ void do_main_loop(callback_func func, int fps, int simulate_infinite_loop) {
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(func, fps, simulate_infinite_loop);
 #else
-    if (fps == 0 && simulate_infinite_loop == true) {
+    if (fps == 60 && simulate_infinite_loop == true) {
         stop_main_loop = false;
         while (!stop_main_loop) {
             func();

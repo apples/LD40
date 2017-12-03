@@ -6,7 +6,7 @@ namespace resources {
 
 resource_cache<sushi::texture_2d, std::string> textures ([](const std::string& name) {
     std::clog << "Loading texture: " << name << std::endl;
-    return sushi::load_texture_2d("data/textures/"+name+".png", false, true, false, false);
+    return sushi::load_texture_2d("data/textures/"+name+".png", false, false, false, false);
 });
 
 resource_cache<sushi::static_mesh, std::string> meshes ([](const std::string& name) {
