@@ -16,7 +16,7 @@ enum tile_flags : std::uint8_t {
 };
 
 struct tile {
-    tile_flags flags;
+    std::uint8_t flags;
     std::uint8_t background;
     std::uint8_t foreground;
 };
@@ -32,6 +32,10 @@ public:
     int get_num_rows() const;
 
     int get_num_cols() const;
+
+    void set_num_rows(int newr);
+
+    void set_num_cols(int newc);
 
     const tile& get(int r, int c) const;
 

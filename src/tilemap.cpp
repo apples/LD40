@@ -35,6 +35,28 @@ int tilemap::get_num_cols() const {
     return num_cols;
 }
 
+void tilemap::set_num_rows(int newr) {
+    std::vector<tile> newtiles (newr*num_cols, tile{});
+    for (int r=0; r<num_rows && r<newr; ++r) {
+        for (int c=0; c<num_cols; ++c) {
+            newtiles[r*num_cols+c] = get(r,c);
+        }
+    }
+    tiles = std::move(newtiles);
+    num_rows = newr;
+}
+
+void tilemap::set_num_cols(int newc) {
+    std::vector<tile> newtiles (num_rows*newc);
+    for (int r=0; r<num_rows; ++r) {
+        for (int c=0; c<num_cols && c<newc; ++c) {
+            newtiles[r*newc+c] = get(r,c);
+        }
+    }
+    tiles = std::move(newtiles);
+    num_cols = newc;
+}
+
 const tile& tilemap::get(int r, int c) const {
     return tiles[r * num_cols + c];
 }
