@@ -177,6 +177,7 @@ int main(int argc, char* argv[]) try {
     //entities.create_component(player, component::velocity{});
     entities.create_component(player, component::aabb{-8,8,-8,8});
     entities.create_component(player, component::animated_sprite{"knight", "idle", 0, 0});
+    entities.create_component(player, component::health{3});
 
     auto enemythink = [&](database::ent_id self){
         auto& self_pos = entities.get_component<component::position>(self);
@@ -253,13 +254,13 @@ int main(int argc, char* argv[]) try {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            auto projmat = glm::ortho(0.f, float(320), 0.f, float(240), -10.f, 10.f);
+            auto projmat = glm::ortho(0.f, 640.f, 0.f, 480.f, -10.f, 10.f);
 
             // View matrix for camera
             // Camera should invert the player matrix to follow the player around
             // x+80 y+60 centers the camera
             auto cammat = glm::mat4(1.f);
-            cammat = glm::translate(cammat, glm::vec3{-player_pos.x + 80, -player_pos.y + 60, 0});
+            cammat = glm::translate(cammat, glm::vec3{-player_pos.x + 160, -player_pos.y + 120, 0});
 
             for (auto r = 0; r < test_stage.get_num_rows(); ++r) {
                 for (auto c = 0; c < test_stage.get_num_cols(); ++c) {
@@ -296,7 +297,13 @@ int main(int argc, char* argv[]) try {
                 pos.y += vel.y;
             });
 
-            entities.visit([&](component::position& pos, const component::aabb& aabb){
+            entities.visit([&](component::position& pos, component::aabb aabb){
+                constexpr auto epsilon = 0.0001;
+                aabb.left += epsilon;
+                aabb.right -= epsilon;
+                aabb.bottom += epsilon;
+                aabb.top -= epsilon;
+
                 {
                     auto r = int(pos.y + aabb.bottom) / 16;
                     auto c = int(pos.x + aabb.left) / 16;
@@ -398,6 +405,11 @@ int main(int argc, char* argv[]) try {
                 sushi::set_texture(0, texture);
                 sushi::draw_mesh(mesh);
             });
+
+            auto& phealth = entities.get_component<component::health>(player);
+            for (int i = 0; i < phealth.value; ++i) {
+                draw_string(font, "+", projmat, glm::vec2{float(8*i), float(240-16)}, 16, text_align::LEFT);
+            }
         }
 
         sushi::set_framebuffer(nullptr);
@@ -407,9 +419,8 @@ int main(int argc, char* argv[]) try {
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_BLEND);
 
-            auto projmat = glm::ortho(0.f, float(320), 0.f, float(240), -1.f, 1.f);
+            auto projmat = glm::ortho(-160.f, 160.f, -120.f, 120.f, -1.f, 1.f);
             auto modelmat = glm::mat4(1.f);
-            modelmat = glm::translate(modelmat, glm::vec3{160, 120, 0});
             sushi::set_program(program);
             sushi::set_uniform("MVP", projmat * modelmat);
             sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));

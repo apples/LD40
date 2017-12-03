@@ -39,6 +39,10 @@ struct velocity {
     float y;
 };
 
+struct health {
+    int value;
+};
+
 } //namespace component
 
 namespace scripting {
