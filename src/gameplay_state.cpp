@@ -9,6 +9,7 @@
 #include "platform.hpp"
 #include "random.hpp"
 #include "window.hpp"
+#include "mainloop.hpp"
 
 void gameplay_state::init() {
     std::clog << "Creating player..." << std::endl;
@@ -126,6 +127,9 @@ void gameplay_state::operator()() {
                 if(event.key.repeat == 0)
                 {
                 switch(event.key.keysym.scancode) {
+                case SDL_SCANCODE_ESCAPE:
+                    mainloop::states.pop_back();
+                    return;
                 //Fist animation spawn on spacebar
                 case SDL_SCANCODE_SPACE: {
                     auto& player_pos = entities.get_component<component::position>(player);

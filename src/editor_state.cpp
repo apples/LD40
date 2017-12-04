@@ -18,7 +18,8 @@
 #include <fstream>
 #include <thread>
 
-editor_state::editor_state() {
+editor_state::editor_state(std::string fname) {
+    filename = "data/stages/"+fname+".json";
     framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
@@ -34,6 +35,31 @@ editor_state::editor_state() {
     glBindAttribLocation(program.get(), sushi::attrib_location::POSITION, "position");
     glBindAttribLocation(program.get(), sushi::attrib_location::TEXCOORD, "texcoord");
     glBindAttribLocation(program.get(), sushi::attrib_location::NORMAL, "normal");
+
+    std::ifstream file (filename);
+
+    if (file) {
+        nlohmann::json json;
+        file >> json;
+
+        map = tilemap::tilemap(json);
+
+        if (!json["time_limit"].is_null()) {
+            time_limit = json["time_limit"];
+        }
+
+        if (!json["spawn"].is_null()) {
+            spawn.x = json["spawn"]["c"];
+            spawn.y = json["spawn"]["r"];
+        }
+
+        for (auto& elf : json["elves"]) {
+            elves.insert({int(elf[0]),int(elf[1])});
+        }
+        for (auto& beer : json["beers"]) {
+            beers.insert({int(beer[0]),int(beer[1])});
+        }
+    }
 }
 
 void editor_state::save() {
@@ -60,7 +86,7 @@ void editor_state::save() {
 
     json["time_limit"] = time_limit;
 
-    std::ofstream file ("data/stages/test_editor.json");
+    std::ofstream file (filename);
     file << json;
 }
 

@@ -10,7 +10,7 @@
 
 class editor_state {
 public:
-    editor_state();
+    editor_state(std::string fname);
     void operator()();
     void save();
 
@@ -29,6 +29,8 @@ private:
     int time_limit = 60;
 
     int cursor_tile = 0;
+
+    std::string filename;
 };
 
 #endif //LD40_EDITOR_STATE_HPP
