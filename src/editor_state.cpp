@@ -11,15 +11,16 @@
 #include "text.hpp"
 
 #include "gameplay_state.hpp"
+#include "editload_state.hpp"
 
 #include <sushi/sushi.hpp>
 
 #include <iostream>
 #include <fstream>
 #include <thread>
+#include <chrono>
 
-editor_state::editor_state(std::string fname) {
-    filename = "data/stages/"+fname+".json";
+editor_state::editor_state() {
     framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
@@ -35,34 +36,13 @@ editor_state::editor_state(std::string fname) {
     glBindAttribLocation(program.get(), sushi::attrib_location::POSITION, "position");
     glBindAttribLocation(program.get(), sushi::attrib_location::TEXCOORD, "texcoord");
     glBindAttribLocation(program.get(), sushi::attrib_location::NORMAL, "normal");
-
-    std::ifstream file (filename);
-
-    if (file) {
-        nlohmann::json json;
-        file >> json;
-
-        map = tilemap::tilemap(json);
-
-        if (!json["time_limit"].is_null()) {
-            time_limit = json["time_limit"];
-        }
-
-        if (!json["spawn"].is_null()) {
-            spawn.x = json["spawn"]["c"];
-            spawn.y = json["spawn"]["r"];
-        }
-
-        for (auto& elf : json["elves"]) {
-            elves.insert({int(elf[0]),int(elf[1])});
-        }
-        for (auto& beer : json["beers"]) {
-            beers.insert({int(beer[0]),int(beer[1])});
-        }
-    }
 }
 
-void editor_state::save() {
+void editor_state::save(std::string name) {
+    if (name.empty()) return;
+
+    filename = name;
+
     nlohmann::json json;
     json["num_rows"] = map.get_num_rows();
     json["num_cols"] = map.get_num_cols();
@@ -86,8 +66,50 @@ void editor_state::save() {
 
     json["time_limit"] = time_limit;
 
-    std::ofstream file (filename);
+    std::ofstream file ("data/stages/"+filename+".json");
     file << json;
+}
+
+void editor_state::load(std::string name) {
+    if (name.empty()) return;
+
+    save("_backup_"+std::to_string(std::chrono::system_clock::now().time_since_epoch().count()));
+
+    position = {};
+    spawn = {};
+    map = {1,1};
+    elves = {};
+    beers = {};
+    time_limit = 60;
+    cursor_tile = 0;
+    filename = "";
+
+    std::ifstream file ("data/stages/"+name+".json");
+
+    if (file) {
+        nlohmann::json json;
+        file >> json;
+
+        map = tilemap::tilemap(json);
+
+        if (!json["time_limit"].is_null()) {
+            time_limit = json["time_limit"];
+        }
+
+        if (!json["spawn"].is_null()) {
+            spawn.x = json["spawn"]["c"];
+            spawn.y = json["spawn"]["r"];
+        }
+
+        for (auto& elf : json["elves"]) {
+            elves.insert({int(elf[0]),int(elf[1])});
+        }
+        for (auto& beer : json["beers"]) {
+            beers.insert({int(beer[0]),int(beer[1])});
+        }
+
+        filename = name;
+    }
 }
 
 void editor_state::operator()() {
@@ -158,8 +180,11 @@ void editor_state::operator()() {
                 map.get(position.y, position.x).flags &= ~tilemap::WALL;
                 break;
             case SDL_SCANCODE_F1:
-                save();
-                break;
+                mainloop::states.push_back(editload_state(editload_state::SAVE, this));
+                return;
+            case SDL_SCANCODE_F2:
+                mainloop::states.push_back(editload_state(editload_state::LOAD, this));
+                return;
             case SDL_SCANCODE_ESCAPE:
                 mainloop::states.pop_back();
                 return;
@@ -290,6 +315,18 @@ void editor_state::operator()() {
             sushi::draw_mesh(editor_sprites->get_mesh(1,0));
         }
 
+        {
+            auto modelmat = glm::mat4(1.f);
+            modelmat = glm::translate(modelmat, glm::vec3{160, 120, 0});
+            sushi::set_program(program);
+            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+            sushi::set_uniform("s_texture", 0);
+            sushi::set_uniform("MVP", projmat * modelmat);
+            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+            sushi::set_texture(0, editor_sprites->get_texture());
+            sushi::draw_mesh(editor_sprites->get_mesh(0,1));
+        }
+
     }
 
     sushi::set_framebuffer(nullptr);
@@ -332,19 +369,9 @@ void editor_state::operator()() {
             sushi::draw_mesh(tilesheet->get_mesh(cursor_tile/16,cursor_tile%16));
         }
 
-        {
-            auto modelmat = glm::mat4(1.f);
-            modelmat = glm::translate(modelmat, glm::vec3{320, 240, 0});
-            sushi::set_program(program);
-            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
-            sushi::set_uniform("s_texture", 0);
-            sushi::set_uniform("MVP", projmat * modelmat);
-            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
-            sushi::set_texture(0, editor_sprites->get_texture());
-            sushi::draw_mesh(editor_sprites->get_mesh(0,1));
-        }
-
         int tr = 1;
+        draw_string(*font, "Arrows: Move", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "Pad: Resize", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
         draw_string(*font, "Q: Brush+", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
         draw_string(*font, "W: Brush-", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
         draw_string(*font, "R: Set BG", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
@@ -359,6 +386,7 @@ void editor_state::operator()() {
         draw_string(*font, "]: Time+", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
         draw_string(*font, "[: Time-", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
         draw_string(*font, "F1: Save", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "F2: Load", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
 
         auto size_str = "R,C = "+std::to_string(map.get_num_rows())+","+std::to_string(map.get_num_cols());
         draw_string(*font, size_str, projmat, {640, 0}, 16, text_align::RIGHT);

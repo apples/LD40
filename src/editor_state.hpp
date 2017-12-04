@@ -10,11 +10,11 @@
 
 class editor_state {
 public:
-    editor_state(std::string fname);
+    editor_state();
     void operator()();
-    void save();
+    void save(std::string name);
+    void load(std::string name);
 
-private:
     sushi::framebuffer framebuffer;
     sushi::static_mesh framebuffer_mesh;
     sushi::unique_program program;

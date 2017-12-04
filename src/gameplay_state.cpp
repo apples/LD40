@@ -32,6 +32,7 @@ bool gameplay_state::init() {
         std::clog << "Winner" << std::endl;
         mainloop::states.pop_back();
         mainloop::states.push_back(end_state("win"));
+        g_soloud->stopAll();
         g_soloud->play(*resources::wavs.get("win"));
         return false;
     }
@@ -80,7 +81,9 @@ bool gameplay_state::init() {
             entities.create_component(self, component::timed_force{dirx*8, diry*8, 5});
             entities.create_component(other, component::timed_force{-dirx*8, -diry*8, 5});
 
-            g_soloud->play(*resources::wavs.get("elfattack"));
+            auto a = resources::wavs.get("elfattack");
+            g_soloud->stopAudioSource(*a);
+            g_soloud->play(*a);
         } else if (entities.has_component<component::booze>(other)) {
             auto& booze = entities.get_component<component::booze>(other);
             auto& drunk = entities.get_component<component::drunken>(self);
@@ -88,7 +91,9 @@ bool gameplay_state::init() {
             drunk.bac += booze.value;
             deadentities.push_back(other);
 
-            g_soloud->play(*resources::wavs.get("gulp"));
+            auto a = resources::wavs.get("gulp");
+            g_soloud->stopAudioSource(*a);
+            g_soloud->play(*a);
         }
     };
     entities.create_component(player, component::collider{player_collider});
@@ -183,6 +188,7 @@ void gameplay_state::operator()() {
         std::clog << "Loser" << std::endl;
         mainloop::states.pop_back();
         mainloop::states.push_back(end_state("lose"));
+        g_soloud->stopAll();
         g_soloud->play(*resources::wavs.get("death"));
         return;
     }
@@ -233,7 +239,9 @@ void gameplay_state::operator()() {
                              }
                              force.duration = 10;
                              entities.create_component(other, force);
-                             g_soloud->play(*resources::wavs.get("punch"));
+                             auto a = resources::wavs.get("punch");
+                             g_soloud->stopAudioSource(*a);
+                             g_soloud->play(*a);
                          }
                      };
 

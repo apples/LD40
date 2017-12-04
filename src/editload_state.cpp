@@ -14,7 +14,10 @@
 
 #include <sushi/sushi.hpp>
 
-editload_state::editload_state() {
+editload_state::editload_state(editload_type t, editor_state* e) {
+    type = t;
+    editor = e;
+
     framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
     framebuffer_mesh = sprite_mesh(framebuffer.color_texs[0]);
 
@@ -47,8 +50,18 @@ void editload_state::operator()() {
         case SDL_KEYDOWN:
             switch (event.key.keysym.scancode) {
             case SDL_SCANCODE_RETURN:
+                switch (type) {
+                case LOAD:
+                    editor->load(text);
+                    break;
+                case SAVE:
+                    editor->save(text);
+                    break;
+                }
                 mainloop::states.pop_back();
-                mainloop::states.push_back(editor_state(text));
+                return;
+            case SDL_SCANCODE_BACKSPACE:
+                text.pop_back();
                 return;
             case SDL_SCANCODE_ESCAPE:
                 mainloop::states.pop_back();
@@ -69,6 +82,6 @@ void editload_state::operator()() {
         auto projmat = glm::ortho(0.f, 640.f, 0.f, 480.f, -1.f, 1.f);
 
         auto font = resources::fonts.get("LiberationSans-Regular");
-        draw_string(*font, "Load: \""+text+"\"", projmat, {0,0}, 16, text_align::LEFT);
+        draw_string(*font, (type==LOAD?"Load: \"":"Save: \"")+text+"\"", projmat, {0,0}, 16, text_align::LEFT);
     }
 }
