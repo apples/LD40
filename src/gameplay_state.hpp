@@ -29,6 +29,8 @@ private:
 
     int stage;
     std::string levelname;
+
+    int rem_time;
 };
 
 #endif //LD40_GAMEPLAY_STATE_HPP

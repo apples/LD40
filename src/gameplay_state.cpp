@@ -10,6 +10,7 @@
 #include "random.hpp"
 #include "window.hpp"
 #include "mainloop.hpp"
+#include "text.hpp"
 
 #include "end_state.hpp"
 
@@ -39,6 +40,12 @@ bool gameplay_state::init() {
     test_stage_file >> test_stage_json;
     test_stage_file.close();
     test_stage = tilemap::tilemap(test_stage_json);
+
+    if (!test_stage_json["time_limit"].is_null()) {
+        rem_time = int(test_stage_json["time_limit"]) * 60;
+    } else {
+        rem_time = 5*60;
+    }
 
     std::clog << "Creating player..." << std::endl;
     player = entities.create_entity();
@@ -164,6 +171,13 @@ void gameplay_state::operator()() {
         if (!init()) {
             return;
         }
+    }
+
+    if (--rem_time <= 0) {
+        std::clog << "Loser" << std::endl;
+        mainloop::states.pop_back();
+        mainloop::states.push_back(end_state("lose"));
+        return;
     }
 
     SDL_Event event;
@@ -511,45 +525,6 @@ void gameplay_state::operator()() {
             sushi::set_texture(0, texture);
             sushi::draw_mesh(mesh);
         });
-
-        {
-//            auto& phealth = entities.get_component<component::health>(player);
-//            auto wholeheart = resources::spritesheets.get("wholeheart", 9, 9);
-//            auto halfheart = resources::spritesheets.get("halfheart", 9, 9);
-//            auto emptyheart = resources::spritesheets.get("emptyheart", 9, 9);
-//            auto modelmat = glm::mat4(1.f);
-//            modelmat = glm::translate(modelmat, glm::vec3{5, 240-6, 0});
-//            for (int i = 0; i < phealth.value/2; ++i) {
-//                sushi::set_program(program);
-//                sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
-//                sushi::set_uniform("s_texture", 0);
-//                sushi::set_uniform("MVP", projmat * modelmat);
-//                sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
-//                sushi::set_texture(0, wholeheart->get_texture());
-//                sushi::draw_mesh(wholeheart->get_mesh(0,0));
-//                modelmat = glm::translate(modelmat, glm::vec3{9, 0, 0});
-//            }
-//            for (int i = 0; i < phealth.value%2; ++i) {
-//                sushi::set_program(program);
-//                sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
-//                sushi::set_uniform("s_texture", 0);
-//                sushi::set_uniform("MVP", projmat * modelmat);
-//                sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
-//                sushi::set_texture(0, halfheart->get_texture());
-//                sushi::draw_mesh(halfheart->get_mesh(0,0));
-//                modelmat = glm::translate(modelmat, glm::vec3{9, 0, 0});
-//            }
-//            for (int i = 0; i < (6-phealth.value)/2; ++i) {
-//                sushi::set_program(program);
-//                sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
-//                sushi::set_uniform("s_texture", 0);
-//                sushi::set_uniform("MVP", projmat * modelmat);
-//                sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
-//                sushi::set_texture(0, emptyheart->get_texture());
-//                sushi::draw_mesh(emptyheart->get_mesh(0,0));
-//                modelmat = glm::translate(modelmat, glm::vec3{9, 0, 0});
-//            }
-        }
     }
 
     sushi::set_framebuffer(nullptr);
@@ -557,7 +532,8 @@ void gameplay_state::operator()() {
         glClearColor(0,0,0,1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
-        glDisable(GL_BLEND);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glViewport(0, 0, 640, 480);
 
         auto projmat = glm::ortho(-160.f, 160.f, -120.f, 120.f, -1.f, 1.f);
@@ -569,6 +545,9 @@ void gameplay_state::operator()() {
         sushi::set_uniform("s_texture", 0);
         sushi::set_texture(0, framebuffer.color_texs[0]);
         sushi::draw_mesh(framebuffer_mesh);
+
+        auto font = resources::fonts.get("LiberationSans-Regular");
+        draw_string(*font, std::to_string(rem_time/60), projmat, {160, 120-16}, 16, text_align::RIGHT);
     }
 
     for(auto e : deadentities)

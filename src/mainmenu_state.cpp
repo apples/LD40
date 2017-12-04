@@ -10,7 +10,7 @@
 #include "window.hpp"
 
 #include "gameplay_state.hpp"
-#include "editor_state.hpp"
+#include "editload_state.hpp"
 
 #include <sushi/sushi.hpp>
 
@@ -54,6 +54,7 @@ void mainmenu_state::operator()() {
                 default:
                     mainloop::states.push_back(gameplay_state(0));
                     return;
+                }
             }
         }
     }
