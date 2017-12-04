@@ -11,6 +11,8 @@
 #include "window.hpp"
 #include "mainloop.hpp"
 
+#include "end_state.hpp"
+
 gameplay_state::gameplay_state(int s){
     stage = s;
 }
@@ -21,12 +23,13 @@ bool gameplay_state::init() {
     nlohmann::json json;
     campaignjson >> json;
 
-    if (!json[stage].is_null()) {
+    if (stage < json.size()) {
         std::clog << "Loading stage #" << stage << std::endl;
         levelname = json[stage];
     } else {
         std::clog << "Winner" << std::endl;
         mainloop::states.pop_back();
+        mainloop::states.push_back(end_state("win"));
         return false;
     }
 
