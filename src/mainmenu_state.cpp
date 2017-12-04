@@ -10,7 +10,7 @@
 #include "window.hpp"
 
 #include "gameplay_state.hpp"
-#include "editload_state.hpp"
+#include "editor_state.hpp"
 
 #include <sushi/sushi.hpp>
 
@@ -45,13 +45,16 @@ void mainmenu_state::operator()() {
             platform::cancel_main_loop();
             return;
         case SDL_KEYDOWN:
-            switch (event.key.keysym.scancode) {
-            case SDL_SCANCODE_F12:
-                mainloop::states.push_back(editload_state());
-                return;
-            default:
-                mainloop::states.push_back(gameplay_state("test"));
-                return;
+            if(event.key.repeat == 0)
+            {
+                switch (event.key.keysym.scancode) {
+                case SDL_SCANCODE_F12:
+                    mainloop::states.push_back(editor_state("test"));
+                    break;
+                default:
+                    mainloop::states.push_back(gameplay_state("test"));
+                    break;
+                }
             }
         }
     }
