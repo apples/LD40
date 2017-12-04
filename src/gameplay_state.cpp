@@ -56,7 +56,7 @@ bool gameplay_state::init() {
 
     std::clog << "Creating player..." << std::endl;
     player = entities.create_entity();
-    entities.create_component(player, component::position{int(test_stage_json["spawn"]["c"])*16+8,int(test_stage_json["spawn"]["r"])*16+8});
+    entities.create_component(player, component::position{float(int(test_stage_json["spawn"]["c"])*16+8),float(int(test_stage_json["spawn"]["r"])*16+8)});
     entities.create_component(player, component::velocity{0, 0});
     entities.create_component(player, component::aabb{-8,8,-8,8});
     entities.create_component(player, component::drunken{});

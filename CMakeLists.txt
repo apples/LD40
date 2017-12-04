@@ -53,7 +53,8 @@ if (EMSCRIPTEN)
         " --memoryprofiler")
     set_target_properties(LD40 PROPERTIES
         CXX_STANDARD 14
-        SUFFIX .html
+        OUTPUT_NAME "index"
+        SUFFIX ".html"
         COMPILE_FLAGS "${LD40_EMSCRIPTEN_PORTS}"
         LINK_FLAGS "${LD40_LINK_FLAGS}"
         LINK_FLAGS_DEBUG "${LD40_LINK_FLAGS_DEBUG}"
