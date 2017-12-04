@@ -81,6 +81,30 @@ void gameplay_state::init() {
         entities.create_component(enemy, component::brain{enemythink});
         entities.create_component(enemy, component::aabb{-8, 8, -8, 8});
         entities.create_component(enemy, component::elf_tag{});
+
+        // Elves collide with eachother
+        auto elf_collider = [&](database::ent_id self, database::ent_id other) {
+            //std::clog << "Elf collided with something." << std::endl;
+            if (entities.has_component<component::elf_tag>(other)) {
+                //std::clog << "    It was an elf!" << std::endl;
+                auto& ppos = entities.get_component<component::position>(self);
+                auto& epos = entities.get_component<component::position>(other);
+
+                auto centerx = (ppos.x + epos.x) / 2;
+                auto centery = (ppos.y + epos.y) / 2;
+
+                auto dirx = ppos.x - epos.x;
+                auto diry = ppos.y - epos.y;
+                auto dirm = std::sqrt(dirx*dirx + diry*diry);
+                dirx /= dirm;
+                diry /= dirm;
+
+                entities.create_component(self, component::timed_force{dirx*4, diry*4, 2});
+                entities.create_component(other, component::timed_force{-dirx*4, -diry*4, 2});
+            }
+        };
+
+        entities.create_component(enemy, component::collider{elf_collider});
     }
 
     for (auto& beerjson : test_stage_json["beers"])
