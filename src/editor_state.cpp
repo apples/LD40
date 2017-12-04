@@ -58,6 +58,8 @@ void editor_state::save() {
     json["spawn"]["r"] = int(spawn.y);
     json["spawn"]["c"] = int(spawn.x);
 
+    json["time_limit"] = time_limit;
+
     std::ofstream file ("data/stages/test_editor.json");
     file << json;
 }
@@ -151,6 +153,12 @@ void editor_state::operator()() {
                     beers.erase(iter);
                 }
             } break;
+            case SDL_SCANCODE_RIGHTBRACKET:
+                time_limit += 5;
+                break;
+            case SDL_SCANCODE_LEFTBRACKET:
+                time_limit -= 5;
+                break;
             case SDL_SCANCODE_S:
                 spawn = position;
                 break;
@@ -244,21 +252,6 @@ void editor_state::operator()() {
             sushi::draw_mesh(beer_sheet->get_mesh(0,0));
         }
 
-        auto font = resources::fonts.get("LiberationSans-Regular");
-        draw_string(*font, "Brush: "+std::to_string(cursor_tile), projmat, {0,0}, 16, text_align::LEFT);
-
-        {
-            auto modelmat = glm::mat4(1.f);
-            modelmat = glm::translate(modelmat, glm::vec3{160, 120, 4});
-            sushi::set_program(program);
-            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
-            sushi::set_uniform("s_texture", 0);
-            sushi::set_uniform("MVP", projmat * modelmat);
-            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
-            sushi::set_texture(0, editor_sprites->get_texture());
-            sushi::draw_mesh(editor_sprites->get_mesh(0,1));
-        }
-
         {
             auto modelmat = glm::mat4(1.f);
             modelmat = glm::translate(modelmat, glm::vec3{spawn.x*16+8, spawn.y*16+8, 5});
@@ -270,6 +263,7 @@ void editor_state::operator()() {
             sushi::set_texture(0, editor_sprites->get_texture());
             sushi::draw_mesh(editor_sprites->get_mesh(1,0));
         }
+
     }
 
     sushi::set_framebuffer(nullptr);
@@ -277,7 +271,8 @@ void editor_state::operator()() {
         glClearColor(0,0,0,1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
-        glDisable(GL_BLEND);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glViewport(0, 0, 640, 480);
 
         auto projmat = glm::ortho(-160.f, 160.f, -120.f, 120.f, -1.f, 1.f);
@@ -289,5 +284,60 @@ void editor_state::operator()() {
         sushi::set_uniform("s_texture", 0);
         sushi::set_texture(0, framebuffer.color_texs[0]);
         sushi::draw_mesh(framebuffer_mesh);
+
+        projmat = glm::ortho(0.f, 640.f, 0.f, 480.f, -1.f, 1.f);
+
+        auto tilesheet = resources::spritesheets.get("tiles", 16, 16);
+
+        auto editor_sprites = resources::spritesheets.get("editor", 16, 16);
+
+        auto font = resources::fonts.get("LiberationSans-Regular");
+        draw_string(*font, "Brush:", projmat, {0,0}, 16, text_align::LEFT);
+
+        {
+            auto modelmat = glm::mat4(1.f);
+            modelmat = glm::translate(modelmat, glm::vec3{64, 8, 0});
+            sushi::set_program(program);
+            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+            sushi::set_uniform("s_texture", 0);
+            sushi::set_uniform("MVP", projmat * modelmat);
+            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+            sushi::set_texture(0, tilesheet->get_texture());
+            sushi::draw_mesh(tilesheet->get_mesh(cursor_tile/16,cursor_tile%16));
+        }
+
+        {
+            auto modelmat = glm::mat4(1.f);
+            modelmat = glm::translate(modelmat, glm::vec3{320, 240, 0});
+            sushi::set_program(program);
+            sushi::set_uniform("cam_forward", glm::vec3{0,0,-1});
+            sushi::set_uniform("s_texture", 0);
+            sushi::set_uniform("MVP", projmat * modelmat);
+            sushi::set_uniform("normal_mat", glm::transpose(glm::inverse(modelmat)));
+            sushi::set_texture(0, editor_sprites->get_texture());
+            sushi::draw_mesh(editor_sprites->get_mesh(0,1));
+        }
+
+        int tr = 1;
+        draw_string(*font, "Q: Brush+", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "W: Brush-", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "R: Set BG", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "F: Set FG", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "T: Del BG", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "G: Del FG", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "C: Wall+", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "V: Wall-", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "O: Elf", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "P: Beer", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "S: Tipsy", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "]: Time+", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "[: Time-", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+        draw_string(*font, "F1: Save", projmat, {0,480-16*tr++}, 16, text_align::LEFT);
+
+        auto size_str = "R,C = "+std::to_string(map.get_num_rows())+","+std::to_string(map.get_num_cols());
+        draw_string(*font, size_str, projmat, {640, 0}, 16, text_align::RIGHT);
+
+        auto time_str = "Time = " + std::to_string(time_limit);
+        draw_string(*font, time_str, projmat, {640, 480-16}, 16, text_align::RIGHT);
     }
 }

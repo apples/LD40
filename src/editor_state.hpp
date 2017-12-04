@@ -26,6 +26,8 @@ private:
     std::set<std::tuple<int,int>> elves;
     std::set<std::tuple<int,int>> beers;
 
+    int time_limit = 60;
+
     int cursor_tile = 0;
 };
 
