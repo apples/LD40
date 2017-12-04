@@ -12,6 +12,7 @@
 #include "tilemap.hpp"
 #include "animated_sprite.hpp"
 #include "window.hpp"
+#include "soloud.hpp"
 
 #include "mainloop.hpp"
 #include "mainmenu_state.hpp"
@@ -53,6 +54,8 @@ int main(int argc, char* argv[]) try {
     std::clog << "Initializing SoLoud..." << std::endl;
     SoLoud::Soloud soloud;
     soloud.init();
+
+    g_soloud = &soloud;
 
     std::clog << "Loading config..." << std::endl;
     auto config = emberjs::get_config();

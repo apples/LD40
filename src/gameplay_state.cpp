@@ -11,6 +11,7 @@
 #include "window.hpp"
 #include "mainloop.hpp"
 #include "text.hpp"
+#include "soloud.hpp"
 
 #include "end_state.hpp"
 
@@ -31,6 +32,7 @@ bool gameplay_state::init() {
         std::clog << "Winner" << std::endl;
         mainloop::states.pop_back();
         mainloop::states.push_back(end_state("win"));
+        g_soloud->play(*resources::wavs.get("win"));
         return false;
     }
 
@@ -77,12 +79,16 @@ bool gameplay_state::init() {
 
             entities.create_component(self, component::timed_force{dirx*8, diry*8, 5});
             entities.create_component(other, component::timed_force{-dirx*8, -diry*8, 5});
+
+            g_soloud->play(*resources::wavs.get("elfattack"));
         } else if (entities.has_component<component::booze>(other)) {
             auto& booze = entities.get_component<component::booze>(other);
             auto& drunk = entities.get_component<component::drunken>(self);
 
             drunk.bac += booze.value;
             deadentities.push_back(other);
+
+            g_soloud->play(*resources::wavs.get("gulp"));
         }
     };
     entities.create_component(player, component::collider{player_collider});
@@ -177,6 +183,7 @@ void gameplay_state::operator()() {
         std::clog << "Loser" << std::endl;
         mainloop::states.pop_back();
         mainloop::states.push_back(end_state("lose"));
+        g_soloud->play(*resources::wavs.get("death"));
         return;
     }
 
@@ -226,6 +233,7 @@ void gameplay_state::operator()() {
                              }
                              force.duration = 10;
                              entities.create_component(other, force);
+                             g_soloud->play(*resources::wavs.get("punch"));
                          }
                      };
 
