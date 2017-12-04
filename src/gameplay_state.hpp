@@ -11,6 +11,7 @@
 
 class gameplay_state {
 public:
+    gameplay_state(std::string);
     void init();
     void operator()();
 private:
@@ -25,6 +26,8 @@ private:
     database::ent_id player;
 
     bool initted = false;
+
+    std::string levelname;
 };
 
 #endif //LD40_GAMEPLAY_STATE_HPP

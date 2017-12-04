@@ -10,6 +10,10 @@
 #include "random.hpp"
 #include "window.hpp"
 
+gameplay_state::gameplay_state(std::string stagename){
+    levelname = stagename;
+}
+
 void gameplay_state::init() {
     std::clog << "Creating player..." << std::endl;
     player = entities.create_entity();
@@ -52,7 +56,7 @@ void gameplay_state::init() {
     entities.create_component(player, component::collider{player_collider});
 
     std::clog << "Loading stage..." << std::endl;
-    std::ifstream test_stage_file ("data/stages/test.json");
+    std::ifstream test_stage_file ("data/stages/" + levelname + ".json");
     nlohmann::json test_stage_json;
     test_stage_file >> test_stage_json;
     test_stage_file.close();

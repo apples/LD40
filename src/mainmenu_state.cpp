@@ -50,7 +50,7 @@ void mainmenu_state::operator()() {
                 mainloop::states.push_back(editor_state());
                 break;
             default:
-                mainloop::states.push_back(gameplay_state());
+                mainloop::states.push_back(gameplay_state("test"));
                 break;
             }
         }
