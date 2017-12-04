@@ -11,8 +11,8 @@
 
 class gameplay_state {
 public:
-    gameplay_state(std::string);
-    void init();
+    gameplay_state(int s);
+    bool init();
     void operator()();
 private:
     tilemap::tilemap test_stage;
@@ -27,6 +27,7 @@ private:
 
     bool initted = false;
 
+    int stage;
     std::string levelname;
 };
 

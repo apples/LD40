@@ -61,6 +61,8 @@ struct collider {
 
 using elf_tag = ginseng::tag<struct elf_tag_t>;
 
+using beer_tag = ginseng::tag<struct beer_tag_t>;
+
 struct timed_force {
     float x;
     float y;

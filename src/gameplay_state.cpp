@@ -11,14 +11,35 @@
 #include "window.hpp"
 #include "mainloop.hpp"
 
-gameplay_state::gameplay_state(std::string stagename){
-    levelname = stagename;
+gameplay_state::gameplay_state(int s){
+    stage = s;
 }
 
-void gameplay_state::init() {
+bool gameplay_state::init() {
+
+    std::ifstream campaignjson ("data/meta/campaign.json");
+    nlohmann::json json;
+    campaignjson >> json;
+
+    if (!json[stage].is_null()) {
+        std::clog << "Loading stage #" << stage << std::endl;
+        levelname = json[stage];
+    } else {
+        std::clog << "Winner" << std::endl;
+        mainloop::states.pop_back();
+        return false;
+    }
+
+    std::clog << "Loading stage..." << std::endl;
+    std::ifstream test_stage_file ("data/stages/" + levelname + ".json");
+    nlohmann::json test_stage_json;
+    test_stage_file >> test_stage_json;
+    test_stage_file.close();
+    test_stage = tilemap::tilemap(test_stage_json);
+
     std::clog << "Creating player..." << std::endl;
     player = entities.create_entity();
-    entities.create_component(player, component::position{20,20});
+    entities.create_component(player, component::position{int(test_stage_json["spawn"]["c"])*16+8,int(test_stage_json["spawn"]["r"])*16+8});
     entities.create_component(player, component::velocity{0, 0});
     entities.create_component(player, component::aabb{-8,8,-8,8});
     entities.create_component(player, component::drunken{});
@@ -55,13 +76,6 @@ void gameplay_state::init() {
         }
     };
     entities.create_component(player, component::collider{player_collider});
-
-    std::clog << "Loading stage..." << std::endl;
-    std::ifstream test_stage_file ("data/stages/" + levelname + ".json");
-    nlohmann::json test_stage_json;
-    test_stage_file >> test_stage_json;
-    test_stage_file.close();
-    test_stage = tilemap::tilemap(test_stage_json);
 
     auto enemythink = [&](database::ent_id self){
         auto& self_pos = entities.get_component<component::position>(self);
@@ -119,6 +133,7 @@ void gameplay_state::init() {
         entities.create_component(ent, component::animated_sprite{"beer", "idle", 0, 0});
         entities.create_component(ent, component::aabb{-8, 8, -8, 8});
         entities.create_component(ent, component::booze{1});
+        entities.create_component(ent, component::beer_tag{});
     }
 
     framebuffer = sushi::create_framebuffer(utility::vectorify(sushi::create_uninitialized_texture_2d(320, 240)));
@@ -138,10 +153,15 @@ void gameplay_state::init() {
     glBindAttribLocation(program.get(), sushi::attrib_location::NORMAL, "normal");
 
     initted = true;
+    return true;
 }
 
 void gameplay_state::operator()() {
-    if (!initted) init();
+    if (!initted) {
+        if (!init()) {
+            return;
+        }
+    }
 
     SDL_Event event;
     while (SDL_PollEvent(&event))
@@ -228,6 +248,18 @@ void gameplay_state::operator()() {
                 }
                 break;
         }
+    }
+
+    bool still_beer = false;
+    entities.visit([&](component::beer_tag) {
+        still_beer = true;
+    });
+
+    if (!still_beer) {
+        auto next_stage = stage+1;
+        mainloop::states.pop_back();
+        mainloop::states.push_back(gameplay_state(next_stage));
+        return;
     }
 
     const Uint8 *keys = SDL_GetKeyboardState(NULL);

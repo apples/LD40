@@ -50,7 +50,7 @@ void mainmenu_state::operator()() {
                 mainloop::states.push_back(editload_state());
                 return;
             default:
-                mainloop::states.push_back(gameplay_state("test"));
+                mainloop::states.push_back(gameplay_state(0));
                 return;
             }
         }
