@@ -37,6 +37,10 @@ bool gameplay_state::init() {
         return false;
     }
 
+    auto music = resources::musics.get("TipsysTunes");
+    g_soloud->stopAudioSource(*music);
+    g_soloud->play(*music);
+
     std::clog << "Loading stage..." << std::endl;
     std::ifstream test_stage_file ("data/stages/" + levelname + ".json");
     nlohmann::json test_stage_json;
@@ -63,14 +67,9 @@ bool gameplay_state::init() {
 
     // player handles most collisions
     auto player_collider = [&](database::ent_id self, database::ent_id other) {
-        std::clog << "Player collided with something." << std::endl;
         if (entities.has_component<component::elf_tag>(other)) {
-            std::clog << "    It was an elf!" << std::endl;
             auto& ppos = entities.get_component<component::position>(self);
             auto& epos = entities.get_component<component::position>(other);
-
-            auto centerx = (ppos.x + epos.x) / 2;
-            auto centery = (ppos.y + epos.y) / 2;
 
             auto dirx = ppos.x - epos.x;
             auto diry = ppos.y - epos.y;

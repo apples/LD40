@@ -41,4 +41,12 @@ resource_cache<msdf_font, std::string> fonts ([](const std::string& name) {
     return msdf_font(name);
 });
 
+resource_cache<SoLoud::Wav, std::string> musics ([](const std::string& name) {
+    std::clog << "Loading music: " << name << std::endl;
+    auto wav = std::make_shared<SoLoud::Wav>();
+    wav->load(("data/music/"+name+".ogg").c_str());
+    wav->setLooping(1);
+    return wav;
+});
+
 } //namespace resources

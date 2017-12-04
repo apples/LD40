@@ -9,6 +9,7 @@
 #include <sushi/texture.hpp>
 #include <sushi/mesh.hpp>
 #include <soloud_wav.h>
+#include <soloud_wavstream.h>
 
 #include <string>
 #include <tuple>
@@ -20,6 +21,8 @@ extern resource_cache<sushi::texture_2d, std::string> textures;
 extern resource_cache<sushi::static_mesh, std::string> meshes;
 
 extern resource_cache<SoLoud::Wav, std::string> wavs;
+
+extern resource_cache<SoLoud::Wav, std::string> musics;
 
 extern resource_cache<animated_sprite, std::string> animated_sprites;
 
