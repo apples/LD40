@@ -54,6 +54,8 @@ bool gameplay_state::init() {
         rem_time = 5*60;
     }
 
+
+
     std::clog << "Creating player..." << std::endl;
     player = entities.create_entity();
     entities.create_component(player, component::position{float(int(test_stage_json["spawn"]["c"])*16+8),float(int(test_stage_json["spawn"]["r"])*16+8)});
@@ -333,12 +335,24 @@ void gameplay_state::operator()() {
 
         auto projmat = glm::ortho(0.f, 320.f, 0.f, 240.f, -10.f, 10.f);
 
+        //screensway timer
+        int drukentimer = 0;
+        drukentimer++;
+        float swaytime = drukentimer/60.f;
+        float tiltfactor = sin(swaytime)*glm::radians(7.f);
+        auto& pdrunk = entities.get_component<component::drunken>(player);
+        tiltfactor = tiltfactor*pdrunk.bac;
+
         // View matrix for camera
         // Camera should invert the player matrix to follow the player around
         // x+80 y+60 centers the camera
         auto& player_pos = entities.get_component<component::position>(player);
         auto cammat = glm::mat4(1.f);
         cammat = glm::translate(cammat, glm::vec3{-player_pos.x + 160, -player_pos.y + 120, 0});
+        if(pdrunk.bac%2 == 0)
+            cammat = glm::rotate(cammat, tiltfactor, glm::vec3{0,0,1});
+        else
+            cammat = glm::rotate(cammat, -tiltfactor, glm::vec3{0,0,1});
 
         auto tilesheet = resources::spritesheets.get("tiles", 16, 16);
 
