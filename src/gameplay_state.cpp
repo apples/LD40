@@ -82,7 +82,7 @@ bool gameplay_state::init() {
 
             auto a = resources::wavs.get("elfattack");
             g_soloud->stopAudioSource(*a);
-            g_soloud->play(*a);
+            g_soloud->play(*a, 0.7);
         } else if (entities.has_component<component::booze>(other)) {
             auto& booze = entities.get_component<component::booze>(other);
             auto& drunk = entities.get_component<component::drunken>(self);
