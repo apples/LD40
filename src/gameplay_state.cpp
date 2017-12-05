@@ -303,11 +303,13 @@ void gameplay_state::operator()() {
     if (keys[SDL_SCANCODE_LEFT]) {
         player_vel.x -= 1;
         entities.create_component(player, component::fistdir::LEFT);
+        entities.create_component(player, component::animated_sprite{"tipsy", "left", 0, 0});
     }
 
     if (keys[SDL_SCANCODE_RIGHT]) {
         player_vel.x += 1;
         entities.create_component(player, component::fistdir::RIGHT);
+        entities.create_component(player, component::animated_sprite{"tipsy", "idle", 0, 0});
     }
 
     if (keys[SDL_SCANCODE_DOWN]) {
