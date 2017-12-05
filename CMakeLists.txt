@@ -44,6 +44,8 @@ if (EMSCRIPTEN)
     string(CONCAT LD40_LINK_FLAGS
         "${LD40_EMSCRIPTEN_PORTS}"
         " -s DISABLE_EXCEPTION_CATCHING=0"
+        #" -s ALLOW_MEMORY_GROWTH=1"
+        " -s TOTAL_MEMORY=33554432"
         " -lopenal"
         " --preload-file ${LD40_DATA_DIR}@data"
         " --shell-file ${LD40_SHELL}")

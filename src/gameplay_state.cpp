@@ -340,8 +340,13 @@ void gameplay_state::operator()() {
 
         auto tilesheet = resources::spritesheets.get("tiles", 16, 16);
 
-        for (auto r = 0; r < test_stage.get_num_rows(); ++r) {
-            for (auto c = 0; c < test_stage.get_num_cols(); ++c) {
+        auto first_row = std::max(int((player_pos.y - 8)/16)-7, 0);
+        auto last_row = std::min(int((player_pos.y - 8)/16)+9, test_stage.get_num_rows());
+        auto first_col = std::max(int((player_pos.x - 8)/16)-10, 0);
+        auto last_col = std::min(int((player_pos.x - 8)/16)+13, test_stage.get_num_cols());
+
+        for (auto r = first_row; r < last_row; ++r) {
+            for (auto c = first_col; c < last_col; ++c) {
                 auto& tile = test_stage.get(r, c);
                 if (tile.flags & tilemap::BACKGROUND || tile.flags & tilemap::FOREGROUND) {
                     auto modelmat = glm::mat4(1.f);
@@ -506,6 +511,8 @@ void gameplay_state::operator()() {
         });
 
         entities.visit([&](const component::position& pos, component::animated_sprite& sprite) {
+            if (std::abs(pos.x-player_pos.x) > 168 || std::abs(pos.y-player_pos.y) > 128) return;
+
             auto animation = resources::animated_sprites.get(sprite.name);
             auto& sheet = animation->get_spritesheet();
             auto& anim = animation->get_anim(sprite.anim);
