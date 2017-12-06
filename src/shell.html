@@ -62,6 +62,21 @@
       <input style="display: none;" type="button" value="Fullscreen" onclick="Module.requestFullscreen(document.getElementById('pointerLock').checked, document.getElementById('resize').checked)">
     </div>
     <script type='text/javascript'>
+        window.onclick = function(evt) {
+            window.focus();
+            evt.preventDefault();
+            evt.stopPropagation();
+        };
+
+        window.onkeydown = function(e) {
+            var key = e.keyCode;
+            if(key==32 || key == 37 || key == 38 || key == 39 || key == 40) {
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        };
+
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
