@@ -106,6 +106,7 @@ else()
         ${SDL2_INCLUDE_DIRS})
     set_target_properties(LD40 PROPERTIES
         CXX_STANDARD 14
+        LINK_FLAGS "-static"
         RUNTIME_OUTPUT_DIRECTORY "${LD40_DIST_DIR}")
     target_link_libraries(LD40
         emberjs_shim
@@ -115,6 +116,17 @@ else()
         msdfgen
         soloud
         ${SDL2_LIBRARIES}
-        glad)
+        glad
+        png16
+        z)
     add_dependencies(LD40 LD40_data)
+
+    if (WIN32)
+        target_link_libraries(LD40
+            ole32
+            oleaut32
+            imm32
+            winmm
+            version)
+    endif()
 endif()
